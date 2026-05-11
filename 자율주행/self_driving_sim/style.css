@@ -1,0 +1,58 @@
+body {
+    margin: 0;
+    overflow: hidden;
+    background: #000;
+    font-family: Arial, sans-serif;
+    color: white;
+}
+#simulation-container {
+    display: flex;
+    flex-direction: row;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+}
+#carCanvas {
+    background: lightgray;
+    margin-right: 20px;
+}
+#controls-panel {
+    background: #111;
+    padding: 20px;
+    color: white;
+    width: 300px;
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    box-sizing: border-box;
+}
+#controls-panel h2 {
+    margin-top: 0;
+}
+.stats p {
+    font-size: 1.1em;
+    margin: 10px 0;
+}
+.buttons button {
+    display: block;
+    width: 100%;
+    margin-bottom: 10px;
+    padding: 10px;
+    cursor: pointer;
+    background: #333;
+    color: white;
+    border: 1px solid #555;
+    border-radius: 5px;
+    font-size: 1em;
+}
+.buttons button:hover {
+    background: #555;
+}
+#network-visualizer {
+    margin-top: 20px;
+    flex-grow: 1;
+}
+#networkCanvas {
+    background: #000;
+    border: 1px solid #333;
+}

@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Self-Driving Car Simulation</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div id="simulation-container">
+        <!-- Canvas for the driving environment -->
+        <canvas id="carCanvas"></canvas>
+        
+        <div id="controls-panel">
+            <h2>AI Controls</h2>
+            <div class="stats">
+                <p>Generation: <span id="gen-count">1</span></p>
+                <p>Cars Alive: <span id="alive-count">0</span> / <span id="total-count">0</span></p>
+                <p>Best Fitness: <span id="best-fitness">0</span></p>
+            </div>
+            <div class="buttons">
+                <button id="save-btn" title="Save the best brain">Save 💾</button>
+                <button id="discard-btn" title="Delete the saved brain">Discard 🗑️</button>
+                <button id="reset-btn" title="Restart simulation completely">Reset 🔄</button>
+                <button id="next-gen-btn" title="Kill all cars and start next generation">Next Gen ⏭️</button>
+            </div>
+            
+            <div id="network-visualizer">
+                <h3>Brain Visualizer</h3>
+                <!-- Canvas for visualizing the neural network of the best car -->
+                <canvas id="networkCanvas"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="utils.js"></script>
+    <script src="network.js"></script>
+    <script src="sensor.js"></script>
+    <script src="road.js"></script>
+    <script src="car.js"></script>
+    <script src="visualizer.js"></script>
+    <script src="main.js"></script>
+</body>
+</html>
