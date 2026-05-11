@@ -1,0 +1,11 @@
+Step 0: my_p count=1, other_p count=31
+  Source 0 ships=10
+  Avail=9
+  Potential targets count=31
+    Target 1: eta=45.5, blocked=False
+      Needed=42.0, avail=9
+    Target 2: eta=29.6, blocked=False
+      Needed=42.0, avail=9
+    Target 3: eta=54.3, blocked=True
+    Target 4: eta=16.4, blocked=False
+      Needed=18.0, avail=9

@@ -1,0 +1,12 @@
+[11:42:29] Starting training...
+[11:55:26] Epoch 500/4000 | Loss: 0.001837
+[12:08:37] Epoch 1000/4000 | Loss: 0.000064
+[12:22:01] Epoch 1500/4000 | Loss: 0.000028
+[12:35:15] Epoch 2000/4000 | Loss: 0.000016
+[12:48:31] Epoch 2500/4000 | Loss: 0.000010
+[13:01:48] Epoch 3000/4000 | Loss: 0.000007
+[13:15:45] Epoch 3500/4000 | Loss: 0.000005
+[13:30:33] Epoch 4000/4000 | Loss: 0.000004
+[13:30:36] ERROR: 'cp949' codec can't encode character '\u2705' in position 92: illegal multibyte sequence
+[23:26:57] RE-STARTING training with safe export...
+[00:42:20] CRITICAL ERROR: I/O operation on closed file.

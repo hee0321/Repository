@@ -1,0 +1,33 @@
+task,success,error,params,loss,epoch,hidden_dim,onnx_path
+task013.json,False,Deep refinement failed,,,,,
+task009.json,False,Deep refinement failed,,,,,
+task084.json,False,Deep refinement failed,,,,,
+task051.json,False,Deep refinement failed,,,,,
+task107.json,False,Deep refinement failed,,,,,
+task108.json,False,Deep refinement failed,,,,,
+task112.json,False,Deep refinement failed,,,,,
+task137.json,True,,7727850.0,0.0002045133733190596,500.0,160.0,.\task137.onnx
+task131.json,False,Deep refinement failed,,,,,
+task159.json,False,Deep refinement failed,,,,,
+task148.json,True,,7727850.0,4.800745955435559e-05,1700.0,160.0,.\task148.onnx
+task170.json,False,Deep refinement failed,,,,,
+task176.json,True,,7727850.0,2.3417967895511538e-05,1350.0,160.0,.\task176.onnx
+task209.json,False,Deep refinement failed,,,,,
+task185.json,False,Deep refinement failed,,,,,
+task221.json,False,Deep refinement failed,,,,,
+task218.json,False,Deep refinement failed,,,,,
+task240.json,False,Deep refinement failed,,,,,
+task231.json,False,Deep refinement failed,,,,,
+task244.json,True,,7727850.0,2.013801349676214e-05,1650.0,160.0,.\task244.onnx
+task269.json,False,Deep refinement failed,,,,,
+task275.json,True,,7727850.0,3.767309681279585e-05,1450.0,160.0,.\task275.onnx
+task292.json,False,Deep refinement failed,,,,,
+task310.json,False,Deep refinement failed,,,,,
+task280.json,False,Deep refinement failed,,,,,
+task335.json,True,,7727850.0,3.8155871152412146e-05,1050.0,160.0,.\task335.onnx
+task328.json,False,Deep refinement failed,,,,,
+task376.json,False,Deep refinement failed,,,,,
+task349.json,False,Deep refinement failed,,,,,
+task383.json,False,Deep refinement failed,,,,,
+task382.json,True,,7727850.0,5.408358629210852e-05,1700.0,160.0,.\task382.onnx
+task398.json,False,Deep refinement failed,,,,,

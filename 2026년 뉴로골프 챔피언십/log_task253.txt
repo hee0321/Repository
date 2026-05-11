@@ -1,0 +1,9 @@
+Training Start: .\task253.json | dim=96
+Epoch 0: Loss 0.753764
+Epoch 50: Loss 0.005814
+Epoch 100: Loss 0.003667
+Epoch 150: Loss 0.003101
+Epoch 200: Loss 0.002412
+Epoch 250: Loss 0.001635
+Epoch 300: Loss 0.000682
+Epoch 350: Loss 0.000326

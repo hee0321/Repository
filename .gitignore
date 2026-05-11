@@ -1,0 +1,48 @@
+# Ignore everything
+*
+
+# Allow the .gitignore itself
+!.gitignore
+
+# Whitelist project folders
+!2026년 뉴로골프 챔피언십/
+!Maze Crawler/
+!NVIDIA Nemotron Model Reasoning Challenge)/
+!obit game/
+!ai라이브/
+!connect-ai-music/
+!연구자동화 에이전트/
+!Documents/
+!.gemini/
+
+# Allow everything inside these folders
+!2026년 뉴로골프 챔피언십/**
+!Maze Crawler/**
+!NVIDIA Nemotron Model Reasoning Challenge)/**
+!obit game/**
+!ai라이브/**
+!connect-ai-music/**
+!연구자동화 에이전트/**
+!Documents/**
+!.gemini/antigravity/scratch/**
+
+# Explicitly ignore huge/unwanted folders
+.gemini/antigravity-browser-profile/
+.gemini/antigravity/brain/
+.gemini/antigravity/logs/
+**/outputs/
+**/checkpoints/
+**/offload/
+**/unsloth_compiled_cache/
+**/*.pth
+**/*.h5
+**/*.onnx
+**/*.safetensors
+**/*.gguf
+**/*.zip
+**/*.mp4
+**/*.exe
+**/__pycache__/
+**/*.pyc
+**/node_modules/
+**/.git/

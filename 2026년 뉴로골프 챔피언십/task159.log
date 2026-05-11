@@ -1,0 +1,10 @@
+[14:44:32] Starting training...
+[14:54:26] Epoch 500/4000 | Loss: 0.000305
+[15:04:25] Epoch 1000/4000 | Loss: 0.000062
+[15:14:42] Epoch 1500/4000 | Loss: 0.000030
+[15:25:04] Epoch 2000/4000 | Loss: 0.000017
+[15:35:28] Epoch 2500/4000 | Loss: 0.000011
+[15:45:51] Epoch 3000/4000 | Loss: 0.000007
+[15:56:09] Epoch 3500/4000 | Loss: 0.000005
+[16:06:35] Epoch 4000/4000 | Loss: 0.000004
+[16:06:36] ERROR: 'cp949' codec can't encode character '\u2705' in position 92: illegal multibyte sequence

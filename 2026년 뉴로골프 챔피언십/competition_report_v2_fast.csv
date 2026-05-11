@@ -1,0 +1,401 @@
+task,success,onnx_path,skipped,params,loss,epoch,hidden_dim,error
+task160.json,True,.\task160.onnx,True,,,,,
+task161.json,True,.\task161.onnx,True,,,,,
+task169.json,True,.\task169.onnx,True,,,,,
+task162.json,True,.\task162.onnx,,130234.0,0.00030831454205326736,300.0,48.0,
+task171.json,True,.\task171.onnx,True,,,,,
+task164.json,True,.\task164.onnx,,130234.0,0.0001455729507142678,350.0,48.0,
+task167.json,True,.\task167.onnx,,130234.0,8.125822932925075e-05,350.0,48.0,
+task166.json,True,.\task166.onnx,,130234.0,0.00014953644131310284,450.0,48.0,
+task172.json,True,.\task172.onnx,,130234.0,0.00010406809451524168,550.0,48.0,
+task176.json,False,,,,,,,Attempt failed
+task175.json,True,.\task175.onnx,,130234.0,0.00014295830624178052,750.0,48.0,
+task168.json,False,,,,,,,Attempt failed
+task165.json,False,,,,,,,Attempt failed
+task170.json,False,,,,,,,Attempt failed
+task163.json,False,,,,,,,Attempt failed
+task179.json,True,.\task179.onnx,,130234.0,0.00013923933147452772,500.0,48.0,
+task174.json,False,,,,,,,Attempt failed
+task173.json,False,,,,,,,Attempt failed
+task181.json,True,.\task181.onnx,,130234.0,0.00013589588343165815,350.0,48.0,
+task186.json,True,.\task186.onnx,True,,,,,
+task178.json,True,.\task178.onnx,,130234.0,7.535992335760966e-05,900.0,48.0,
+task180.json,True,.\task180.onnx,,130234.0,0.00011878764780703932,650.0,48.0,
+task188.json,True,.\task188.onnx,,130234.0,0.00018678356718737632,350.0,48.0,
+task177.json,False,,,,,,,Attempt failed
+task183.json,True,.\task183.onnx,,130234.0,0.00013138505164533854,900.0,48.0,
+task182.json,False,,,,,,,Attempt failed
+task193.json,True,.\task193.onnx,True,,,,,
+task192.json,True,.\task192.onnx,,130234.0,0.0001643720897845924,500.0,48.0,
+task189.json,True,.\task189.onnx,,130234.0,0.0001872329303296283,1150.0,48.0,
+task184.json,False,,,,,,,Attempt failed
+task187.json,False,,,,,,,Attempt failed
+task185.json,False,,,,,,,Attempt failed
+task191.json,True,.\task191.onnx,,130234.0,0.0001522293168818578,1000.0,48.0,
+task198.json,True,.\task198.onnx,,130234.0,0.0004221823764964938,300.0,48.0,
+task196.json,True,.\task196.onnx,,130234.0,0.00015444426389876753,400.0,48.0,
+task190.json,False,,,,,,,Attempt failed
+task200.json,False,,,,,,,Attempt failed
+task194.json,True,.\task194.onnx,,130234.0,9.97046590782702e-05,1100.0,48.0,
+task204.json,True,.\task204.onnx,,130234.0,0.0001848388055805117,400.0,48.0,
+task195.json,False,,,,,,,Attempt failed
+task199.json,False,,,,,,,Attempt failed
+task197.json,False,,,,,,,Attempt failed
+task202.json,False,,,,,,,Attempt failed
+task207.json,True,.\task207.onnx,,130234.0,0.0001294500398216769,400.0,48.0,
+task201.json,False,,,,,,,Attempt failed
+task210.json,True,.\task210.onnx,,130234.0,0.00015031418297439814,250.0,48.0,
+task208.json,True,.\task208.onnx,,130234.0,0.00031012616818770766,500.0,48.0,
+task212.json,True,.\task212.onnx,,130234.0,0.00026505737332627177,250.0,48.0,
+task203.json,False,,,,,,,Attempt failed
+task205.json,False,,,,,,,Attempt failed
+task206.json,False,,,,,,,Attempt failed
+task209.json,False,,,,,,,Attempt failed
+task211.json,False,,,,,,,Attempt failed
+task220.json,True,.\task220.onnx,True,,,,,
+task213.json,False,,,,,,,Attempt failed
+task222.json,True,.\task222.onnx,True,,,,,
+task214.json,False,,,,,,,Attempt failed
+task215.json,False,,,,,,,Attempt failed
+task216.json,False,,,,,,,Attempt failed
+task226.json,True,.\task226.onnx,,130234.0,0.0003197818004991859,250.0,48.0,
+task217.json,False,,,,,,,Attempt failed
+task227.json,True,.\task227.onnx,,130234.0,0.00019647546287160367,250.0,48.0,
+task225.json,True,.\task225.onnx,,130234.0,0.00017559275147505105,450.0,48.0,
+task230.json,True,.\task230.onnx,True,,,,,
+task218.json,False,,,,,,,Attempt failed
+task223.json,True,.\task223.onnx,,130234.0,0.00014435469347517937,850.0,48.0,
+task229.json,True,.\task229.onnx,,130234.0,0.0001800867321435362,350.0,48.0,
+task219.json,False,,,,,,,Attempt failed
+task221.json,False,,,,,,,Attempt failed
+task228.json,True,.\task228.onnx,,130234.0,0.00015897616685833782,1000.0,48.0,
+task235.json,False,,,,,,,Attempt failed
+task224.json,False,,,,,,,Attempt failed
+task236.json,True,.\task236.onnx,,130234.0,9.229876741301268e-05,600.0,48.0,
+task231.json,False,,,,,,,Attempt failed
+task232.json,False,,,,,,,Attempt failed
+task237.json,True,.\task237.onnx,,130234.0,9.27342553040944e-05,900.0,48.0,
+task233.json,False,,,,,,,Attempt failed
+task234.json,False,,,,,,,Attempt failed
+task243.json,True,.\task243.onnx,,130234.0,0.0005114175146445632,300.0,48.0,
+task245.json,True,.\task245.onnx,,130234.0,0.00014897098299115896,400.0,48.0,
+task238.json,False,,,,,,,Attempt failed
+task248.json,False,,,,,,,Attempt failed
+task239.json,False,,,,,,,Attempt failed
+task241.json,True,.\task241.onnx,,130234.0,9.808711183723062e-05,1200.0,48.0,
+task240.json,False,,,,,,,Attempt failed
+task251.json,True,.\task251.onnx,,130234.0,0.000388080021366477,200.0,48.0,
+task242.json,False,,,,,,,Attempt failed
+task249.json,True,.\task249.onnx,,130234.0,0.00011359884956618771,700.0,48.0,
+task244.json,False,,,,,,,Attempt failed
+task246.json,False,,,,,,,Attempt failed
+task255.json,True,.\task255.onnx,,130234.0,0.000343384308507666,300.0,48.0,
+task258.json,True,.\task258.onnx,True,,,,,
+task250.json,True,.\task250.onnx,,130234.0,7.861708581913263e-05,1100.0,48.0,
+task256.json,True,.\task256.onnx,,130234.0,0.0001127643117797561,450.0,48.0,
+task261.json,True,.\task261.onnx,True,,,,,
+task262.json,True,.\task262.onnx,True,,,,,
+task247.json,False,,,,,,,Attempt failed
+task257.json,True,.\task257.onnx,,130234.0,0.00011496905790409073,600.0,48.0,
+task265.json,True,.\task265.onnx,True,,,,,
+task266.json,True,.\task266.onnx,True,,,,,
+task259.json,True,.\task259.onnx,,130234.0,0.00011732232815120369,700.0,48.0,
+task252.json,False,,,,,,,Attempt failed
+task253.json,False,,,,,,,Attempt failed
+task267.json,True,.\task267.onnx,,130234.0,0.00020447105634957552,450.0,48.0,
+task254.json,False,,,,,,,Attempt failed
+task272.json,True,.\task272.onnx,True,,,,,
+task263.json,True,.\task263.onnx,,130234.0,9.31868635234423e-05,900.0,48.0,
+task273.json,True,.\task273.onnx,,130234.0,0.0003319501120131463,200.0,48.0,
+task274.json,True,.\task274.onnx,,130234.0,0.00020218135614413768,300.0,48.0,
+task276.json,True,.\task276.onnx,True,,,,,
+task260.json,False,,,,,,,Attempt failed
+task278.json,True,.\task278.onnx,True,,,,,
+task264.json,False,,,,,,,Attempt failed
+task271.json,True,.\task271.onnx,,130234.0,0.00013057910837233067,750.0,48.0,
+task270.json,True,.\task270.onnx,,130234.0,7.151211320888251e-05,1250.0,48.0,
+task282.json,True,.\task282.onnx,True,,,,,
+task283.json,True,.\task283.onnx,True,,,,,
+task268.json,False,,,,,,,Attempt failed
+task269.json,False,,,,,,,Attempt failed
+task277.json,False,,,,,,,Attempt failed
+task279.json,False,,,,,,,Attempt failed
+task275.json,False,,,,,,,Attempt failed
+task281.json,False,,,,,,,Attempt failed
+task288.json,True,.\task288.onnx,,130234.0,0.00012876983964815736,600.0,48.0,
+task285.json,True,.\task285.onnx,,130234.0,0.00015111608081497252,1050.0,48.0,
+task280.json,False,,,,,,,Attempt failed
+task292.json,False,,,,,,,Attempt failed
+task294.json,True,.\task294.onnx,True,,,,,
+task287.json,True,.\task287.onnx,,130234.0,0.0002387057465966791,850.0,48.0,
+task284.json,False,,,,,,,Attempt failed
+task293.json,True,.\task293.onnx,,130234.0,0.00017127656610682607,450.0,48.0,
+task286.json,False,,,,,,,Attempt failed
+task299.json,True,.\task299.onnx,,130234.0,0.0005597184062935412,150.0,48.0,
+task298.json,True,.\task298.onnx,,130234.0,0.0003834280068986118,300.0,48.0,
+task296.json,True,.\task296.onnx,,130234.0,8.748358959564939e-05,650.0,48.0,
+task302.json,True,.\task302.onnx,True,,,,,
+task289.json,False,,,,,,,Attempt failed
+task303.json,True,.\task303.onnx,,130234.0,0.00019258591055404395,450.0,48.0,
+task290.json,False,,,,,,,Attempt failed
+task301.json,True,.\task301.onnx,,130234.0,0.00012770420289598405,700.0,48.0,
+task300.json,True,.\task300.onnx,,130234.0,0.00012549065286293626,900.0,48.0,
+task291.json,False,,,,,,,Attempt failed
+task309.json,True,.\task309.onnx,True,,,,,
+task295.json,False,,,,,,,Attempt failed
+task305.json,True,.\task305.onnx,,130234.0,0.00016895023873075843,450.0,48.0,
+task297.json,False,,,,,,,Attempt failed
+task311.json,True,.\task311.onnx,,130234.0,0.000123625184642151,250.0,48.0,
+task314.json,True,.\task314.onnx,True,,,,,
+task315.json,True,.\task315.onnx,,130234.0,0.0001106244235415943,450.0,48.0,
+task304.json,False,,,,,,,Attempt failed
+task317.json,True,.\task317.onnx,True,,,,,
+task318.json,True,.\task318.onnx,,130234.0,0.00019398859876673669,350.0,48.0,
+task306.json,False,,,,,,,Attempt failed
+task307.json,False,,,,,,,Attempt failed
+task308.json,False,,,,,,,Attempt failed
+task322.json,True,.\task322.onnx,True,,,,,
+task310.json,False,,,,,,,Attempt failed
+task320.json,True,.\task320.onnx,,130234.0,0.00038000813219696283,200.0,48.0,
+task312.json,False,,,,,,,Attempt failed
+task313.json,False,,,,,,,Attempt failed
+task326.json,True,.\task326.onnx,,130234.0,0.00028991635190322995,350.0,48.0,
+task321.json,True,.\task321.onnx,,130234.0,0.00010085494432132691,700.0,48.0,
+task316.json,True,.\task316.onnx,,130234.0,0.00011513695790199563,1300.0,48.0,
+task327.json,True,.\task327.onnx,,130234.0,0.00012872337538283318,450.0,48.0,
+task331.json,True,.\task331.onnx,True,,,,,
+task323.json,False,,,,,,,Attempt failed
+task330.json,True,.\task330.onnx,,130234.0,0.00012262881500646472,450.0,48.0,
+task334.json,True,.\task334.onnx,True,,,,,
+task329.json,True,.\task329.onnx,,130234.0,0.00013203882554080337,550.0,48.0,
+task336.json,True,.\task336.onnx,,130234.0,0.0002610323717817664,250.0,48.0,
+task337.json,True,.\task337.onnx,True,,,,,
+task319.json,False,,,,,,,Attempt failed
+task338.json,True,.\task338.onnx,,130234.0,0.00044793522101826966,150.0,48.0,
+task324.json,False,,,,,,,Attempt failed
+task325.json,False,,,,,,,Attempt failed
+task333.json,True,.\task333.onnx,,130234.0,0.00010963078239001334,1100.0,48.0,
+task328.json,False,,,,,,,Attempt failed
+task344.json,True,.\task344.onnx,True,,,,,
+task341.json,True,.\task341.onnx,,130234.0,0.00010163465776713565,850.0,48.0,
+task332.json,False,,,,,,,Attempt failed
+task347.json,True,.\task347.onnx,True,,,,,
+task342.json,True,.\task342.onnx,,130234.0,0.00011885338608408347,1050.0,48.0,
+task335.json,False,,,,,,,Attempt failed
+task339.json,False,,,,,,,Attempt failed
+task340.json,False,,,,,,,Attempt failed
+task352.json,True,.\task352.onnx,True,,,,,
+task348.json,True,.\task348.onnx,,130234.0,7.743539026705548e-05,750.0,48.0,
+task346.json,True,.\task346.onnx,,130234.0,7.904364611022174e-05,1200.0,48.0,
+task343.json,False,,,,,,,Attempt failed
+task345.json,False,,,,,,,Attempt failed
+task350.json,True,.\task350.onnx,,130234.0,0.0002613947435747832,1000.0,48.0,
+task357.json,False,,,,,,,Attempt failed
+task353.json,True,.\task353.onnx,,130234.0,6.434509123209864e-05,1050.0,48.0,
+task359.json,True,.\task359.onnx,,130234.0,0.0002469325845595449,450.0,48.0,
+task349.json,False,,,,,,,Attempt failed
+task351.json,False,,,,,,,Attempt failed
+task356.json,True,.\task356.onnx,,130234.0,7.151484896894544e-05,900.0,48.0,
+task354.json,False,,,,,,,Attempt failed
+task360.json,True,.\task360.onnx,,130234.0,0.00013579841470345855,650.0,48.0,
+task364.json,True,.\task364.onnx,,130234.0,0.00018512707902118564,450.0,48.0,
+task355.json,False,,,,,,,Attempt failed
+task361.json,True,.\task361.onnx,,130234.0,0.00015376957890111953,900.0,48.0,
+task369.json,True,.\task369.onnx,True,,,,,
+task363.json,True,.\task363.onnx,,130234.0,0.0001306077028857544,850.0,48.0,
+task358.json,False,,,,,,,Attempt failed
+task367.json,True,.\task367.onnx,,130234.0,0.0001791617542039603,350.0,48.0,
+task373.json,True,.\task373.onnx,,130234.0,0.00022990610159467906,250.0,48.0,
+task362.json,False,,,,,,,Attempt failed
+task375.json,True,.\task375.onnx,,130234.0,0.0005050036124885082,250.0,48.0,
+task372.json,True,.\task372.onnx,,130234.0,0.00015721122326795012,750.0,48.0,
+task376.json,False,,,,,,,Attempt failed
+task371.json,True,.\task371.onnx,,130234.0,9.672334272181615e-05,900.0,48.0,
+task365.json,True,.\task365.onnx,,130234.0,0.00012512355169747025,1400.0,48.0,
+task366.json,False,,,,,,,Attempt failed
+task380.json,True,.\task380.onnx,,130234.0,8.682116458658129e-05,400.0,48.0,
+task381.json,True,.\task381.onnx,,130234.0,0.00012053433601977304,400.0,48.0,
+task368.json,False,,,,,,,Attempt failed
+task370.json,False,,,,,,,Attempt failed
+task374.json,False,,,,,,,Attempt failed
+task386.json,True,.\task386.onnx,,130234.0,0.00011370557331247255,300.0,48.0,
+task377.json,False,,,,,,,Attempt failed
+task378.json,False,,,,,,,Attempt failed
+task389.json,True,.\task389.onnx,True,,,,,
+task379.json,False,,,,,,,Attempt failed
+task382.json,False,,,,,,,Attempt failed
+task383.json,False,,,,,,,Attempt failed
+task384.json,False,,,,,,,Attempt failed
+task385.json,False,,,,,,,Attempt failed
+task395.json,True,.\task395.onnx,True,,,,,
+task390.json,True,.\task390.onnx,,130234.0,0.00010121215746039525,650.0,48.0,
+task397.json,True,.\task397.onnx,,130234.0,0.00018208613619208336,400.0,48.0,
+task387.json,False,,,,,,,Attempt failed
+task394.json,True,.\task394.onnx,,130234.0,9.02507163118571e-05,650.0,48.0,
+task388.json,False,,,,,,,Attempt failed
+task001.json,True,.\task001.onnx,True,,,,,
+task002.json,True,.\task002.onnx,True,,,,,
+task003.json,True,.\task003.onnx,True,,,,,
+task004.json,True,.\task004.onnx,True,,,,,
+task391.json,False,,,,,,,Attempt failed
+task006.json,True,.\task006.onnx,True,,,,,
+task007.json,True,.\task007.onnx,True,,,,,
+task008.json,True,.\task008.onnx,True,,,,,
+task399.json,True,.\task399.onnx,,130234.0,7.383459887932986e-05,550.0,48.0,
+task392.json,False,,,,,,,Attempt failed
+task011.json,True,.\task011.onnx,True,,,,,
+task012.json,True,.\task012.onnx,True,,,,,
+task393.json,False,,,,,,,Attempt failed
+task014.json,True,.\task014.onnx,True,,,,,
+task015.json,True,.\task015.onnx,True,,,,,
+task016.json,True,.\task016.onnx,True,,,,,
+task017.json,True,.\task017.onnx,True,,,,,
+task018.json,True,.\task018.onnx,True,,,,,
+task396.json,False,,,,,,,Attempt failed
+task020.json,True,.\task020.onnx,True,,,,,
+task400.json,True,.\task400.onnx,,130234.0,0.00017791321442928165,1100.0,48.0,
+task398.json,False,,,,,,,Attempt failed
+task023.json,True,.\task023.onnx,True,,,,,
+task005.json,False,,,,,,,Attempt failed
+task009.json,False,,,,,,,Attempt failed
+task026.json,True,.\task026.onnx,True,,,,,
+task027.json,True,.\task027.onnx,True,,,,,
+task028.json,True,.\task028.onnx,True,,,,,
+task029.json,True,.\task029.onnx,True,,,,,
+task030.json,True,.\task030.onnx,True,,,,,
+task010.json,False,,,,,,,Attempt failed
+task032.json,True,.\task032.onnx,True,,,,,
+task013.json,False,,,,,,,Attempt failed
+task034.json,True,.\task034.onnx,True,,,,,
+task035.json,True,.\task035.onnx,True,,,,,
+task019.json,False,,,,,,,Attempt failed
+task037.json,True,.\task037.onnx,True,,,,,
+task038.json,True,.\task038.onnx,True,,,,,
+task039.json,True,.\task039.onnx,True,,,,,
+task040.json,True,.\task040.onnx,True,,,,,
+task041.json,True,.\task041.onnx,True,,,,,
+task042.json,True,.\task042.onnx,True,,,,,
+task021.json,False,,,,,,,Attempt failed
+task044.json,True,.\task044.onnx,True,,,,,
+task022.json,False,,,,,,,Attempt failed
+task046.json,True,.\task046.onnx,True,,,,,
+task047.json,True,.\task047.onnx,True,,,,,
+task048.json,True,.\task048.onnx,True,,,,,
+task024.json,False,,,,,,,Attempt failed
+task050.json,True,.\task050.onnx,True,,,,,
+task025.json,False,,,,,,,Attempt failed
+task052.json,True,.\task052.onnx,True,,,,,
+task053.json,True,.\task053.onnx,True,,,,,
+task031.json,False,,,,,,,Attempt failed
+task033.json,False,,,,,,,Attempt failed
+task056.json,True,.\task056.onnx,True,,,,,
+task057.json,True,.\task057.onnx,True,,,,,
+task058.json,False,,,,,,,Attempt failed
+task059.json,True,.\task059.onnx,True,,,,,
+task060.json,True,.\task060.onnx,True,,,,,
+task061.json,True,.\task061.onnx,True,,,,,
+task062.json,True,.\task062.onnx,True,,,,,
+task063.json,True,.\task063.onnx,True,,,,,
+task036.json,False,,,,,,,Attempt failed
+task043.json,False,,,,,,,Attempt failed
+task066.json,True,.\task066.onnx,True,,,,,
+task067.json,True,.\task067.onnx,True,,,,,
+task045.json,False,,,,,,,Attempt failed
+task069.json,True,.\task069.onnx,True,,,,,
+task070.json,True,.\task070.onnx,True,,,,,
+task071.json,True,.\task071.onnx,True,,,,,
+task072.json,True,.\task072.onnx,True,,,,,
+task073.json,True,.\task073.onnx,True,,,,,
+task074.json,True,.\task074.onnx,True,,,,,
+task049.json,False,,,,,,,Attempt failed
+task051.json,False,,,,,,,Attempt failed
+task077.json,True,.\task077.onnx,True,,,,,
+task078.json,True,.\task078.onnx,True,,,,,
+task054.json,False,,,,,,,Attempt failed
+task055.json,False,,,,,,,Attempt failed
+task081.json,True,.\task081.onnx,True,,,,,
+task082.json,True,.\task082.onnx,True,,,,,
+task083.json,True,.\task083.onnx,True,,,,,
+task064.json,False,,,,,,,Attempt failed
+task068.json,False,,,,,,,Attempt failed
+task086.json,True,.\task086.onnx,True,,,,,
+task087.json,True,.\task087.onnx,True,,,,,
+task065.json,False,,,,,,,Attempt failed
+task075.json,False,,,,,,,Attempt failed
+task090.json,True,.\task090.onnx,True,,,,,
+task091.json,True,.\task091.onnx,True,,,,,
+task076.json,False,,,,,,,Attempt failed
+task084.json,False,,,,,,,Attempt failed
+task079.json,False,,,,,,,Attempt failed
+task095.json,True,.\task095.onnx,True,,,,,
+task080.json,False,,,,,,,Attempt failed
+task097.json,True,.\task097.onnx,True,,,,,
+task098.json,True,.\task098.onnx,True,,,,,
+task099.json,True,.\task099.onnx,True,,,,,
+task100.json,True,.\task100.onnx,True,,,,,
+task085.json,False,,,,,,,Attempt failed
+task102.json,True,.\task102.onnx,True,,,,,
+task103.json,True,.\task103.onnx,True,,,,,
+task104.json,True,.\task104.onnx,True,,,,,
+task105.json,True,.\task105.onnx,True,,,,,
+task106.json,True,.\task106.onnx,True,,,,,
+task088.json,False,,,,,,,Attempt failed
+task089.json,False,,,,,,,Attempt failed
+task093.json,False,,,,,,,Attempt failed
+task110.json,True,.\task110.onnx,True,,,,,
+task111.json,True,.\task111.onnx,True,,,,,
+task092.json,False,,,,,,,Attempt failed
+task094.json,False,,,,,,,Attempt failed
+task114.json,True,.\task114.onnx,True,,,,,
+task096.json,False,,,,,,,Attempt failed
+task116.json,True,.\task116.onnx,True,,,,,
+task101.json,False,,,,,,,Attempt failed
+task118.json,True,.\task118.onnx,True,,,,,
+task107.json,False,,,,,,,Attempt failed
+task120.json,True,.\task120.onnx,True,,,,,
+task108.json,False,,,,,,,Attempt failed
+task122.json,True,.\task122.onnx,True,,,,,
+task109.json,False,,,,,,,Attempt failed
+task113.json,False,,,,,,,Attempt failed
+task125.json,True,.\task125.onnx,True,,,,,
+task126.json,True,.\task126.onnx,True,,,,,
+task127.json,True,.\task127.onnx,True,,,,,
+task128.json,True,.\task128.onnx,True,,,,,
+task129.json,True,.\task129.onnx,True,,,,,
+task130.json,True,.\task130.onnx,True,,,,,
+task112.json,False,,,,,,,Attempt failed
+task115.json,False,,,,,,,Attempt failed
+task117.json,False,,,,,,,Attempt failed
+task119.json,False,,,,,,,Attempt failed
+task135.json,True,.\task135.onnx,True,,,,,
+task121.json,False,,,,,,,Attempt failed
+task123.json,False,,,,,,,Attempt failed
+task124.json,False,,,,,,,Attempt failed
+task139.json,True,.\task139.onnx,True,,,,,
+task140.json,True,.\task140.onnx,True,,,,,
+task131.json,False,,,,,,,Attempt failed
+task142.json,True,.\task142.onnx,True,,,,,
+task143.json,True,.\task143.onnx,True,,,,,
+task144.json,True,.\task144.onnx,True,,,,,
+task132.json,False,,,,,,,Attempt failed
+task146.json,True,.\task146.onnx,True,,,,,
+task147.json,True,.\task147.onnx,True,,,,,
+task133.json,False,,,,,,,Attempt failed
+task149.json,True,.\task149.onnx,True,,,,,
+task150.json,True,.\task150.onnx,True,,,,,
+task151.json,True,.\task151.onnx,True,,,,,
+task152.json,True,.\task152.onnx,True,,,,,
+task153.json,True,.\task153.onnx,True,,,,,
+task154.json,True,.\task154.onnx,True,,,,,
+task155.json,True,.\task155.onnx,True,,,,,
+task156.json,True,.\task156.onnx,True,,,,,
+task134.json,False,,,,,,,Attempt failed
+task136.json,False,,,,,,,Attempt failed
+task138.json,False,,,,,,,Attempt failed
+task137.json,False,,,,,,,Attempt failed
+task141.json,False,,,,,,,Attempt failed
+task145.json,False,,,,,,,Attempt failed
+task148.json,False,,,,,,,Attempt failed
+task157.json,False,,,,,,,Attempt failed
+task158.json,False,,,,,,,Attempt failed
+task159.json,False,,,,,,,Attempt failed
