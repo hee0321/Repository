@@ -1,35 +1,60 @@
-# Ignore everything
-*
+# Ignore System and Internal Folders
+.antigravity/
+.cache/
+.claude/
+.config/
+.gemini/
+.kaggle/
+.lmstudio/
+.mcp-auth/
+.ollama/
+.openclaw/
+.redhat/
+.triton/
+AppData/
+"Application Data"/
+Contacts/
+Cookies/
+"Local Settings"/
+NetHood/
+PrintHood/
+Recent/
+SendTo/
+Templates/
+"시작 메뉴"/
+"My Documents"/
+NTUSER.DAT*
+ntuser.dat*
+ntuser.ini
 
-# Allow the .gitignore itself
-!.gitignore
+# Ignore Standard Media/Large Folders
+Downloads/
+Music/
+Videos/
+OneDrive/
+"Saved Games"/
+Favorites/
+Links/
+Searches/
 
-# Whitelist project folders
-!2026년 뉴로골프 챔피언십/
-!Maze Crawler/
-!NVIDIA Nemotron Model Reasoning Challenge)/
-!obit game/
-!ai라이브/
-!connect-ai-music/
-!연구자동화 에이전트/
-!Documents/
-!.gemini/
+# Ignore Secrets and Credentials
+.env*
+*.env
+config.json
+credentials.json
+*.pem
+*.key
+*.p12
+*.pub
+*secret*
+*token*
+*password*
+*credential*
+*key*
+**/secrets/
+**/credentials/
 
-# Allow everything inside these folders
-!2026년 뉴로골프 챔피언십/**
-!Maze Crawler/**
-!NVIDIA Nemotron Model Reasoning Challenge)/**
-!obit game/**
-!ai라이브/**
-!connect-ai-music/**
-!연구자동화 에이전트/**
-!Documents/**
-!.gemini/antigravity/scratch/**
-
-# Explicitly ignore huge/unwanted folders
-.gemini/antigravity-browser-profile/
-.gemini/antigravity/brain/
-.gemini/antigravity/logs/
+# Ignore specific huge/unwanted folders and files everywhere
 **/outputs/
 **/checkpoints/
 **/offload/
@@ -37,10 +62,11 @@
 **/*.pth
 **/*.h5
 **/*.onnx
+**/*.onnx.data
 **/*.safetensors
 **/*.gguf
-**/*.zip
 **/*.mp4
+**/*.zip
 **/*.exe
 **/__pycache__/
 **/*.pyc
