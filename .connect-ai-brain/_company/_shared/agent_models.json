@@ -1,0 +1,12 @@
+{
+  "ceo": "gemma4:e2b",
+  "secretary": "gemma4:e4b",
+  "youtube": "gpt-oss:20b",
+  "researcher": "gpt-oss:20b",
+  "business": "gpt-oss:20b",
+  "writer": "gemma4:e4b",
+  "editor": "gemma4:e4b",
+  "designer": "gemma4:e2b",
+  "developer": "gpt-oss:20b",
+  "instagram": "gemma4:e4b"
+}
