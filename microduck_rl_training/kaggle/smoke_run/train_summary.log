@@ -1,0 +1,371 @@
+=== try num_envs=2048
+[1m                          Learning iteration 2749/3049                          [0m 
+                       Steps per second: 4778 
+                            Mean reward: 0.47
+                    Mean episode length: 11.82
+                         Iteration time: 10.29s
+[1m                          Learning iteration 2750/3049                          [0m 
+                       Steps per second: 6088 
+                            Mean reward: 0.94
+                    Mean episode length: 23.14
+                         Iteration time: 8.07s
+[1m                          Learning iteration 2751/3049                          [0m 
+                       Steps per second: 6068 
+                            Mean reward: 1.87
+                    Mean episode length: 41.18
+                         Iteration time: 8.10s
+[1m                          Learning iteration 2752/3049                          [0m 
+                       Steps per second: 5936 
+                            Mean reward: 3.38
+                    Mean episode length: 70.38
+                         Iteration time: 8.28s
+[1m                          Learning iteration 2753/3049                          [0m 
+                       Steps per second: 5900 
+                            Mean reward: 4.69
+                    Mean episode length: 92.29
+                         Iteration time: 8.33s
+[1m                          Learning iteration 2754/3049                          [0m 
+                       Steps per second: 5905 
+                            Mean reward: 6.00
+                    Mean episode length: 115.46
+                         Iteration time: 8.32s
+[1m                          Learning iteration 2755/3049                          [0m 
+                       Steps per second: 5789 
+                            Mean reward: 7.42
+                    Mean episode length: 142.28
+                         Iteration time: 8.49s
+[1m                          Learning iteration 2756/3049                          [0m 
+                       Steps per second: 5772 
+                            Mean reward: 9.14
+                    Mean episode length: 169.37
+                         Iteration time: 8.52s
+[1m                          Learning iteration 2757/3049                          [0m 
+                       Steps per second: 5631 
+                            Mean reward: 10.25
+                    Mean episode length: 189.20
+                         Iteration time: 8.73s
+[1m                          Learning iteration 2758/3049                          [0m 
+                       Steps per second: 5431 
+                            Mean reward: 11.25
+                    Mean episode length: 212.66
+                         Iteration time: 9.05s
+[1m                          Learning iteration 2759/3049                          [0m 
+                       Steps per second: 5385 
+                            Mean reward: 12.04
+                    Mean episode length: 239.90
+                         Iteration time: 9.13s
+[1m                          Learning iteration 2760/3049                          [0m 
+                       Steps per second: 5377 
+                            Mean reward: 13.55
+                    Mean episode length: 265.73
+                         Iteration time: 9.14s
+[1m                          Learning iteration 2761/3049                          [0m 
+                       Steps per second: 5357 
+                            Mean reward: 14.40
+                    Mean episode length: 287.50
+                         Iteration time: 9.17s
+[1m                          Learning iteration 2762/3049                          [0m 
+                       Steps per second: 5388 
+                            Mean reward: 13.69
+                    Mean episode length: 311.60
+                         Iteration time: 9.12s
+[1m                          Learning iteration 2763/3049                          [0m 
+                       Steps per second: 5272 
+                            Mean reward: 13.99
+                    Mean episode length: 339.42
+                         Iteration time: 9.32s
+[1m                          Learning iteration 2764/3049                          [0m 
+                       Steps per second: 5307 
+                            Mean reward: 14.34
+                    Mean episode length: 358.34
+                         Iteration time: 9.26s
+[1m                          Learning iteration 2765/3049                          [0m 
+                       Steps per second: 5230 
+                            Mean reward: 15.18
+                    Mean episode length: 380.84
+                         Iteration time: 9.40s
+[1m                          Learning iteration 2766/3049                          [0m 
+                       Steps per second: 5313 
+                            Mean reward: 15.92
+                    Mean episode length: 408.34
+                         Iteration time: 9.25s
+[1m                          Learning iteration 2767/3049                          [0m 
+                       Steps per second: 5403 
+                            Mean reward: 16.78
+                    Mean episode length: 436.44
+                         Iteration time: 9.10s
+[1m                          Learning iteration 2768/3049                          [0m 
+                       Steps per second: 5424 
+                            Mean reward: 16.63
+                    Mean episode length: 456.20
+                         Iteration time: 9.06s
+[1m                          Learning iteration 2769/3049                          [0m 
+                       Steps per second: 5543 
+                            Mean reward: 17.63
+                    Mean episode length: 472.91
+                         Iteration time: 8.87s
+[1m                          Learning iteration 2770/3049                          [0m 
+                       Steps per second: 5412 
+                            Mean reward: 18.66
+                    Mean episode length: 504.42
+                         Iteration time: 9.08s
+[1m                          Learning iteration 2771/3049                          [0m 
+                       Steps per second: 5488 
+                            Mean reward: 19.56
+                    Mean episode length: 523.71
+                         Iteration time: 8.96s
+[1m                          Learning iteration 2772/3049                          [0m 
+                       Steps per second: 5340 
+                            Mean reward: 21.45
+                    Mean episode length: 552.45
+                         Iteration time: 9.20s
+[1m                          Learning iteration 2773/3049                          [0m 
+                       Steps per second: 5314 
+                            Mean reward: 21.31
+                    Mean episode length: 579.86
+                         Iteration time: 9.25s
+[1m                          Learning iteration 2774/3049                          [0m 
+                       Steps per second: 5406 
+                            Mean reward: 22.80
+                    Mean episode length: 599.52
+                         Iteration time: 9.09s
+[1m                          Learning iteration 2775/3049                          [0m 
+                       Steps per second: 5303 
+                            Mean reward: 23.90
+                    Mean episode length: 621.66
+                         Iteration time: 9.27s
+[1m                          Learning iteration 2776/3049                          [0m 
+                       Steps per second: 5370 
+                            Mean reward: 24.01
+                    Mean episode length: 642.05
+                         Iteration time: 9.15s
+[1m                          Learning iteration 2777/3049                          [0m 
+                       Steps per second: 5283 
+                            Mean reward: 21.88
+                    Mean episode length: 670.60
+                         Iteration time: 9.30s
+[1m                          Learning iteration 2778/3049                          [0m 
+                       Steps per second: 5359 
+                            Mean reward: 21.14
+                    Mean episode length: 695.48
+                         Iteration time: 9.17s
+[1m                          Learning iteration 2779/3049                          [0m 
+                       Steps per second: 5303 
+                            Mean reward: 24.43
+                    Mean episode length: 719.95
+                         Iteration time: 9.27s
+[1m                          Learning iteration 2780/3049                          [0m 
+                       Steps per second: 5269 
+                            Mean reward: 25.00
+                    Mean episode length: 746.09
+                         Iteration time: 9.33s
+[1m                          Learning iteration 2781/3049                          [0m 
+                       Steps per second: 5278 
+                            Mean reward: 27.59
+                    Mean episode length: 772.38
+                         Iteration time: 9.31s
+[1m                          Learning iteration 2782/3049                          [0m 
+                       Steps per second: 5431 
+                            Mean reward: 27.79
+                    Mean episode length: 792.37
+                         Iteration time: 9.05s
+[1m                          Learning iteration 2783/3049                          [0m 
+                       Steps per second: 5354 
+                            Mean reward: 26.37
+                    Mean episode length: 813.14
+                         Iteration time: 9.18s
+[1m                          Learning iteration 2784/3049                          [0m 
+                       Steps per second: 5334 
+                            Mean reward: 28.18
+                    Mean episode length: 840.21
+                         Iteration time: 9.21s
+[1m                          Learning iteration 2785/3049                          [0m 
+                       Steps per second: 5359 
+                            Mean reward: 28.90
+                    Mean episode length: 861.77
+                         Iteration time: 9.17s
+[1m                          Learning iteration 2786/3049                          [0m 
+                       Steps per second: 5192 
+                            Mean reward: 29.05
+                    Mean episode length: 891.75
+                         Iteration time: 9.47s
+[1m                          Learning iteration 2787/3049                          [0m 
+                       Steps per second: 5258 
+                            Mean reward: 28.23
+                    Mean episode length: 908.49
+                         Iteration time: 9.35s
+[1m                          Learning iteration 2788/3049                          [0m 
+                       Steps per second: 5273 
+                            Mean reward: 28.07
+                    Mean episode length: 930.46
+                         Iteration time: 9.32s
+[1m                          Learning iteration 2789/3049                          [0m 
+                       Steps per second: 5293 
+                            Mean reward: 29.24
+                    Mean episode length: 956.04
+                         Iteration time: 9.29s
+[1m                          Learning iteration 2790/3049                          [0m 
+                       Steps per second: 5263 
+                            Mean reward: 30.44
+                    Mean episode length: 984.60
+                         Iteration time: 9.34s
+[1m                          Learning iteration 2791/3049                          [0m 
+                       Steps per second: 5357 
+                            Mean reward: 30.69
+                    Mean episode length: 988.15
+                         Iteration time: 9.17s
+[1m                          Learning iteration 2792/3049                          [0m 
+                       Steps per second: 5271 
+                            Mean reward: 29.19
+                    Mean episode length: 991.42
+                         Iteration time: 9.32s
+[1m                          Learning iteration 2793/3049                          [0m 
+                       Steps per second: 5447 
+                            Mean reward: 28.07
+                    Mean episode length: 998.77
+                         Iteration time: 9.02s
+[1m                          Learning iteration 2794/3049                          [0m 
+                       Steps per second: 5352 
+                            Mean reward: 26.42
+                    Mean episode length: 993.54
+                         Iteration time: 9.18s
+[1m                          Learning iteration 2795/3049                          [0m 
+                       Steps per second: 5279 
+                            Mean reward: 24.61
+                    Mean episode length: 993.54
+                         Iteration time: 9.31s
+[1m                          Learning iteration 2796/3049                          [0m 
+                       Steps per second: 5320 
+                            Mean reward: 24.90
+                    Mean episode length: 994.88
+                         Iteration time: 9.24s
+[1m                          Learning iteration 2797/3049                          [0m 
+                       Steps per second: 5329 
+                            Mean reward: 24.06
+                    Mean episode length: 995.28
+                         Iteration time: 9.22s
+[1m                          Learning iteration 2798/3049                          [0m 
+                       Steps per second: 5379 
+                            Mean reward: 22.21
+                    Mean episode length: 1000.00
+                         Iteration time: 9.14s
+[1m                          Learning iteration 2799/3049                          [0m 
+                       Steps per second: 5259 
+                            Mean reward: 21.83
+                    Mean episode length: 996.00
+                         Iteration time: 9.35s
+[1m                          Learning iteration 2800/3049                          [0m 
+                       Steps per second: 5300 
+                            Mean reward: 24.27
+                    Mean episode length: 993.16
+                         Iteration time: 9.27s
+[1m                          Learning iteration 2801/3049                          [0m 
+                       Steps per second: 5279 
+                            Mean reward: 22.82
+                    Mean episode length: 989.27
+                         Iteration time: 9.31s
+[1m                          Learning iteration 2802/3049                          [0m 
+                       Steps per second: 5302 
+                            Mean reward: 20.47
+                    Mean episode length: 986.12
+                         Iteration time: 9.27s
+[1m                          Learning iteration 2803/3049                          [0m 
+                       Steps per second: 5279 
+                            Mean reward: 21.11
+                    Mean episode length: 984.51
+                         Iteration time: 9.31s
+[1m                          Learning iteration 2804/3049                          [0m 
+                       Steps per second: 5275 
+                            Mean reward: 23.70
+                    Mean episode length: 990.45
+                         Iteration time: 9.32s
+[1m                          Learning iteration 2805/3049                          [0m 
+                       Steps per second: 5251 
+                            Mean reward: 26.65
+                    Mean episode length: 998.07
+                         Iteration time: 9.36s
+[1m                          Learning iteration 2806/3049                          [0m 
+                       Steps per second: 5447 
+                            Mean reward: 24.49
+                    Mean episode length: 997.42
+                         Iteration time: 9.02s
+[1m                          Learning iteration 2807/3049                          [0m 
+                       Steps per second: 5332 
+                            Mean reward: 22.42
+                    Mean episode length: 989.05
+                         Iteration time: 9.22s
+[1m                          Learning iteration 2808/3049                          [0m 
+                       Steps per second: 5351 
+                            Mean reward: 21.98
+                    Mean episode length: 989.87
+                         Iteration time: 9.19s
+[1m                          Learning iteration 2809/3049                          [0m 
+                       Steps per second: 5289 
+                            Mean reward: 20.03
+                    Mean episode length: 992.25
+                         Iteration time: 9.29s
+[1m                          Learning iteration 2810/3049                          [0m 
+                       Steps per second: 5359 
+                            Mean reward: 19.32
+                    Mean episode length: 984.06
+                         Iteration time: 9.17s
+[1m                          Learning iteration 2811/3049                          [0m 
+                       Steps per second: 5380 
+                            Mean reward: 18.73
+                    Mean episode length: 986.15
+                         Iteration time: 9.14s
+[1m                          Learning iteration 2812/3049                          [0m 
+                       Steps per second: 5264 
+                            Mean reward: 17.58
+                    Mean episode length: 986.05
+                         Iteration time: 9.34s
+[1m                          Learning iteration 2813/3049                          [0m 
+                       Steps per second: 5265 
+                            Mean reward: 18.78
+                    Mean episode length: 993.63
+                         Iteration time: 9.33s
+[1m                          Learning iteration 2814/3049                          [0m 
+                       Steps per second: 5216 
+                            Mean reward: 20.08
+                    Mean episode length: 981.22
+                         Iteration time: 9.42s
+[1m                          Learning iteration 2815/3049                          [0m 
+                       Steps per second: 5344 
+                            Mean reward: 20.56
+                    Mean episode length: 984.55
+                         Iteration time: 9.20s
+[1m                          Learning iteration 2816/3049                          [0m 
+                       Steps per second: 5299 
+                            Mean reward: 21.43
+                    Mean episode length: 988.65
+                         Iteration time: 9.28s
+[1m                          Learning iteration 2817/3049                          [0m 
+                       Steps per second: 5357 
+                            Mean reward: 23.01
+                    Mean episode length: 991.02
+                         Iteration time: 9.17s
+[1m                          Learning iteration 2818/3049                          [0m 
+                       Steps per second: 5311 
+                            Mean reward: 20.60
+                    Mean episode length: 990.37
+                         Iteration time: 9.25s
+[1m                          Learning iteration 2819/3049                          [0m 
+                       Steps per second: 5297 
+                            Mean reward: 20.64
+                    Mean episode length: 997.70
+                         Iteration time: 9.28s
+[1m                          Learning iteration 2820/3049                          [0m 
+                       Steps per second: 5273 
+                            Mean reward: 21.94
+                    Mean episode length: 997.19
+                         Iteration time: 9.32s
+[1m                          Learning iteration 2821/3049                          [0m 
+                       Steps per second: 5351 
+                            Mean reward: 24.18
+                    Mean episode length: 997.85
+                         Iteration time: 9.18s
+[1m                          Learning iteration 2822/3049                          [0m 
+                       Steps per second: 5181 
+                            Mean reward: 24.57
+                    Mean episode length: 999.01
+                         Iteration time: 9.49s
