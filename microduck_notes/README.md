@@ -36,4 +36,4 @@
 velstand v8 계보: v7 `j4i6yoq2`@1250 → v8a `qz5g3bwi`@1750 → v8b `0045i2si`@2749.
 
 ## 관련 저장소
-- 한국어 대화 덕 시제품: `microduck-korean-chat`
+- 한국어 대화 덕 시제품: [`../microduck_korean_chat`](../microduck_korean_chat)
