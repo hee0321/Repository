@@ -1,0 +1,61 @@
+{
+  "schema": 1,
+  "id": "velstand/0045i2si_2749",
+  "task_id": "Mjlab-VelStand-Rough-Backlash-MicroDuck",
+  "experiment_name": "velstand",
+  "iteration": 2749,
+  "checkpoint_file": "model_2749.pt",
+  "checkpoint_sha256": "2c185f1e6982a0a43d41403239bc0c5b0a9d654e4840d25572200c16abe2aa6b",
+  "source": {
+    "wandb_run": "pollen-robotics/mjlab_microduck/0045i2si",
+    "run_name": "2026-10-12_11-47-25_velstand",
+    "created": "2026-10-12T09:47:41Z"
+  },
+  "code": {
+    "repo": "pollen-robotics/microduck_rl",
+    "commit": "3750776761ecfaa5671b36972087cafba45b8527",
+    "on_remote": true,
+    "uncommitted_diff": "uncommitted.diff"
+  },
+  "command": [
+    "uv",
+    "run",
+    "train",
+    "Mjlab-VelStand-Rough-Backlash-MicroDuck",
+    "--env.scene.num-envs",
+    "4096",
+    "--agent.resume",
+    "True",
+    "--wandb-run-path",
+    "pollen-robotics/mjlab_microduck/qz5g3bwi",
+    "--wandb-checkpoint-name",
+    "model_1750.pt",
+    "--agent.max_iterations",
+    "1000"
+  ],
+  "loaded_from": {
+    "wandb_run": "pollen-robotics/mjlab_microduck/qz5g3bwi",
+    "checkpoint": 1750
+  },
+  "teachers": {
+    "algorithm.bc_cfg.expert": {
+      "wandb_run": "pollen-robotics/mjlab_microduck/69u48n8l",
+      "checkpoint": 9750,
+      "bundle": "hf://pollen-robotics/microduck-training/bundles/microduck_stand/69u48n8l_9750"
+    },
+    "algorithm.bc_cfg.anchor": {
+      "wandb_run": "pollen-robotics/mjlab_microduck/441tzs6d",
+      "checkpoint": 3750,
+      "bundle": "hf://pollen-robotics/microduck-training/bundles/velocity2/441tzs6d_3750"
+    }
+  },
+  "onnx": [
+    {
+      "repo": "pollen-robotics/microduck-policies",
+      "file": "velstand.onnx",
+      "revision": "665ae4eb20bfe13bca1ef4ea6d4bb6b4a096e448",
+      "sha256": "2fc7f8ee6acd7d0d3f66a99927b5d5a56589aeed02ec714de329b252d5ccf492",
+      "verified": "actor weights bit-exact"
+    }
+  ]
+}
