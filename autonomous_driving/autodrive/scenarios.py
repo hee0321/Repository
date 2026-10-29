@@ -145,7 +145,8 @@ def sample_train_spec(rng: np.random.Generator, stage: int, failures: list | Non
                 dict(s=float(rng.uniform(30, 220)), d=float(rng.uniform(-1.5, 1.5)), v=0.0, r=1.0),
                 dict(s=float(rng.uniform(30, 220)), d=float(rng.uniform(-1, 1)), v=float(rng.uniform(3, 7)), r=1.0)])
         elif r < 0.6:
-            spec.update(korea=str(rng.choice(["gangnam_station", "daechi_school_zone"])),
+            # 역방향(강남역 우회전 일시정지)도 학습에 넣음 — 예전엔 실패 사례로만 들어가서 우회전 일시정지를 거의 못 배웠음
+            spec.update(korea=str(rng.choice(["gangnam_station", "gangnam_reverse", "daechi_school_zone"])),
                         signal_seed=int(rng.integers(5)))
             spec["max_steps"] = 1500
         else:

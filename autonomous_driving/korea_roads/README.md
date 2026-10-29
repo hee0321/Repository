@@ -28,3 +28,10 @@ OpenStreetMap(OSM) 도로망으로 서울의 실제 길을 시뮬레이터 경�
 - **우회전 일시정지**: 신호 앞뒤 30 m에서 오른쪽으로 크게 꺾이면 우회전 신호로 보고, 빨간불에 우회전하려면 정지선 앞에서 완전히 멈춘 뒤
   15 km/h 이하로 돌아야 해요. 안 멈추면 '우회전 일시정지 위반'.
 - 실제 신호 시간·차로 수·회전 제한 같은 정보는 OSM에 없거나 불완전해서 넣지 않았어요(연습용 근사).
+
+## 실제 시골길: 경기 양평군 서종면 정배리 (`data/yangpyeong_jeongbae.json`, 61 KB)
+
+- 범위: 경도 127.4110~127.4360, 위도 37.5950~37.6110 (정배초등학교 주변). OSM 공식 API `/api/0.6/map` 로 한 번 받아 차가 다닐 수 있는 길(secondary·tertiary·unclassified·residential·living_street·track)과 학교만 남겨 저장.
+- 시나리오: `jeongbae_village`(중미산로 → 정배초 앞 어린이보호구역), `jeongbae_night`(서정로 밤길), `jeongbae_lane`(마을 안길 1차로).
+- 데이터 © OpenStreetMap contributors, ODbL 1.0 (https://www.openstreetmap.org/copyright). 카카오맵·네이버지도는 확인용 링크만 쓰고 데이터는 가져오지 않아요.
+- 다시 받기: `python -c "from autodrive import osm; osm.fetch_osm_api('yangpyeong_jeongbae', (127.4110, 37.5950, 127.4360, 37.6110), refresh=True)"`
