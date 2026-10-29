@@ -1,0 +1,34 @@
+## anchor
+fed vx=0.20 -> achieved +0.106 m/s  tilted_frac=0.00
+fed vx=0.40 -> achieved +0.217 m/s  tilted_frac=0.00
+fed vx=0.60 -> achieved +0.286 m/s  tilted_frac=0.00
+fed vx=0.80 -> achieved +0.309 m/s  tilted_frac=0.00
+fed vx=1.00 -> achieved +0.375 m/s  tilted_frac=0.00
+## anchor_fwd
+fed vx=0.10 -> achieved +0.000 m/s  tilted_frac=0.00
+fed vx=0.15 -> achieved +0.000 m/s  tilted_frac=0.00
+fed vx=0.30 -> achieved +0.151 m/s  tilted_frac=0.00
+fed vx=0.50 -> achieved +0.221 m/s  tilted_frac=0.00
+fed vx=0.70 -> achieved +0.216 m/s  tilted_frac=0.00
+fed vx=0.90 -> achieved +0.350 m/s  tilted_frac=0.00
+fed vx=1.20 -> achieved +0.448 m/s  tilted_frac=0.33
+fed vx=1.40 -> achieved +0.517 m/s  tilted_frac=0.95
+## anchor_bwd
+fed vx=-0.10 -> achieved -0.000 m/s  tilted_frac=0.00
+fed vx=-0.20 -> achieved +0.000 m/s  tilted_frac=0.00
+fed vx=-0.30 -> achieved -0.034 m/s  tilted_frac=0.00
+fed vx=-0.40 -> achieved -0.195 m/s  tilted_frac=0.00
+fed vx=-0.60 -> achieved -0.257 m/s  tilted_frac=0.00
+fed vx=-0.80 -> achieved -0.343 m/s  tilted_frac=0.00
+fed vx=-1.00 -> achieved -0.230 m/s  tilted_frac=0.00
+fed vx=-1.20 -> achieved -0.400 m/s  tilted_frac=0.33
+## v8
+fed vx=0.20 -> achieved +0.090 m/s  tilted_frac=0.00
+fed vx=0.40 -> achieved +0.170 m/s  tilted_frac=0.00
+fed vx=0.60 -> achieved +0.274 m/s  tilted_frac=0.00
+fed vx=0.80 -> achieved +0.324 m/s  tilted_frac=0.00
+fed vx=1.00 -> achieved +0.400 m/s  tilted_frac=0.00
+## 6850
+fed vx=0.20 -> achieved +0.051 m/s  tilted_frac=0.00
+fed vx=0.40 -> achieved +0.186 m/s  tilted_frac=0.00
+fed vx=0.60 -> achieved +0.279 m/s  tilted_frac=0.00

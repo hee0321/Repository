@@ -1,0 +1,23 @@
+[distill] expert BC ON: stand expert (iter 9750) on tilt>35.0° coef=1.0; walk anchor ON on tilt<25.0° coef=1.0; lr=0.0003 epochs=5 mini_batches=4 min_mb=512
+[mdp] Patch 5: WARM START from <hf-cache>/bundles/velstand/0045i2si_2749/model_2749.pt — common_step_counter 66048 → 0, iteration → 0 (curricula restart; weights/normalizer/optimizer kept)
+                             Learning iteration 0/3                              
+                            Mean reward: 0.82
+                    Mean episode length: 15.00
+   Episode_Reward/track_linear_velocity: 0.0080
+           Curriculum/fell_over_disable: 1.2217
+             Curriculum/prone_init_prob: 0.0000
+           Curriculum/topple_push_range: 0.3000
+                             Learning iteration 1/3                              
+                            Mean reward: 1.46
+                    Mean episode length: 27.00
+   Episode_Reward/track_linear_velocity: 0.0346
+           Curriculum/fell_over_disable: 1.2217
+             Curriculum/prone_init_prob: 0.0000
+           Curriculum/topple_push_range: 0.3000
+                             Learning iteration 2/3                              
+                            Mean reward: 0.37
+                    Mean episode length: 39.00
+   Episode_Reward/track_linear_velocity: 0.0669
+           Curriculum/fell_over_disable: 1.2217
+             Curriculum/prone_init_prob: 0.0000
+           Curriculum/topple_push_range: 0.3000

@@ -1,0 +1,167 @@
+diff --git a/src/mjlab_microduck/tasks/distill.py b/src/mjlab_microduck/tasks/distill.py
+index c0156d3..9e23494 100644
+--- a/src/mjlab_microduck/tasks/distill.py
++++ b/src/mjlab_microduck/tasks/distill.py
+@@ -108,6 +108,11 @@ def default_bc_cfg() -> dict:
+         # |wz| knots, "pos"/"neg": fed |wz| per (lin, target)}. A pure function of the obs,
+         # so labels stay consistent; zero yaw (standing, straight walking) is unchanged.
+         "anchor_yaw_remap": None,
++        # Teacher-side forward-speed remap (2026-10-29, velstand SPEED_STAGE): same idea for
++        # vx — the anchor walks ~0.4-0.5x the commanded speed, so it is fed the |vx| that
++        # makes it reach the student's command: {"targets": |vx| knots, "fed": fed |vx|}.
++        # Applied after the yaw remap (which reads the TRUE |v_xy|). None = off.
++        "anchor_lin_remap": None,
+         "body_active_axes": (2, 3, 4),
+         "body_no_teacher_axes": (2,),
+         # Flat actor-obs columns ZEROED in the stand expert's input on fallen frames (tilt >
+@@ -209,6 +214,18 @@ def remap_anchor_yaw(obs: torch.Tensor, twist_slice: tuple[int, int], table: dic
+     return out
+ 
+ 
++def remap_anchor_lin(obs: torch.Tensor, twist_slice: tuple[int, int], table: dict) -> torch.Tensor:
++    """Copy of the flat obs with the forward command vx replaced by the one the walk anchor
++    needs to actually walk at that speed (piecewise linear in |vx|, sign kept, 0 → 0)."""
++    out = obs.clone()
++    vx = obs[:, twist_slice[0]]
++    tk = torch.as_tensor([0.0, *table["targets"]], dtype=obs.dtype, device=obs.device)
++    fk = torch.as_tensor([0.0, *table["fed"]], dtype=obs.dtype, device=obs.device)
++    fed = _interp_rows(vx.abs(), tk, fk.expand(vx.numel(), -1))
++    out[:, twist_slice[0]] = torch.sign(vx) * fed
++    return out
++
++
+ def _with_flat(td: TensorDict, groups: list[str], flat: torch.Tensor) -> TensorDict:
+     """Rebuild the obs groups of ``td`` from a modified flat obs."""
+     off = 0
+@@ -328,6 +345,11 @@ class PpoWithExpertBc(PPO):
+                     anc_flat = remap_anchor_yaw(torch.cat([anc_td[g] for g in groups], dim=-1), tuple(cfg["twist_slice"]),
+                                                 cfg["anchor_yaw_remap"])
+                     anc_td = _with_flat(anc_td, groups, anc_flat)
++                if cfg.get("anchor_lin_remap"):
++                    anc_td = anc_td.clone()
++                    anc_flat = remap_anchor_lin(torch.cat([anc_td[g] for g in groups], dim=-1), tuple(cfg["twist_slice"]),
++                                                cfg["anchor_lin_remap"])
++                    anc_td = _with_flat(anc_td, groups, anc_flat)
+                 target[~fallen] = self.anchor(anc_td)
+         n = idx.numel()
+         mb = max(cfg.get("min_mini_batch", 1), n // cfg["mini_batches"])
+diff --git a/src/mjlab_microduck/tasks/microduck_velstand_env_cfg.py b/src/mjlab_microduck/tasks/microduck_velstand_env_cfg.py
+index ff5b6da..3a79e9b 100644
+--- a/src/mjlab_microduck/tasks/microduck_velstand_env_cfg.py
++++ b/src/mjlab_microduck/tasks/microduck_velstand_env_cfg.py
+@@ -216,6 +216,7 @@ Phases (as before, but with a recovery backstop):
+ """
+ 
+ import math
++import os
+ 
+ from mjlab.envs import ManagerBasedRlEnvCfg
+ from mjlab.managers import (
+@@ -247,6 +248,39 @@ from mjlab_microduck.tasks.symmetry import PpoWithSymmetryCfg
+ 
+ NUM_STEPS_PER_ENV = 24
+ 
++# ── Speed stage (2026-10-29, free Kaggle session 2; opt-in, MICRODUCK_SPEED_STAGE=1) ──
++# Problem: v8 (0045i2si@2749) walks ~0.17 m/s when commanded 0.4 (~0.09 for 0.2), and a
++# 4127-iteration plain resume on Rough (free run v4) did not change that. Cause: the WALK
++# ANCHOR (alpha_walking 441tzs6d@3750) has the same curve and coef-1.0 BC on every upright
++# frame copies it (same mechanism as the yaw dead zone fixed by ENABLE_ANCHOR_YAW_REMAP).
++# Measured on the anchor itself (CPU probe, Flat-Backlash, no pushes, 2-3 envs per value,
++# mean body vx over 2-6 s): fed vx 0.2 / 0.3 / 0.4 / 0.5 / 0.6 / 0.8 / 0.9 / 1.0 / 1.2 →
++# 0.10 / 0.15 / 0.20 / 0.22 / 0.28 / 0.31 / 0.35 / 0.37 / 0.45 m/s, 0 falls up to 1.0,
++# 33 % tilted at 1.2; backward ≈ the same magnitude (-0.4 → -0.20, -0.8 → -0.34).
++# So, behind this flag:
++#   - ANCHOR LIN REMAP: the anchor is fed the forward command that makes IT walk at the
++#     student's commanded |vx| (monotone smoothed inverse of the probe, capped at 1.0 =
++#     no-fall region). Student obs keep the true command; standing (0) and vy unchanged.
++#   - track_linear_velocity weight 2 → 3 so PPO's reward agrees with the faster labels.
++#   - forward-biased x range (-0.3, 0.4) (was ±0.4), lateral ±0.2 (was ±0.3).
++#   - curricula are meant to RESTART (launch with MICRODUCK_WARM_START=1) and velstand's
++#     own ramps (fell_over off, crouch/prone/wide spawns, topple pushes, recovery economics,
++#     protection costs) are stretched ×SPEED_RAMP_STRETCH, so the first ~200 iterations are
++#     clean walking with only the mild ±0.3 m/s stumble pushes, and full get-up/topple
++#     difficulty only returns at ~1600 (pushes) / ~2800 (45 % prone) iterations.
++#   - use with the FLAT task (Mjlab-VelStand-Flat-Backlash-MicroDuck): run v4's terrain
++#     curriculum collapsed 2.39 → ~0 on Rough.
++SPEED_STAGE = os.environ.get("MICRODUCK_SPEED_STAGE", "") not in ("", "0")
++SPEED_RAMP_STRETCH = 2 if SPEED_STAGE else 1
++SPEED_TRACK_LIN_WEIGHT = 3.0
++SPEED_LIN_VEL_X = (-0.3, 0.4)
++SPEED_LIN_VEL_Y = (-0.2, 0.2)
++ANCHOR_LIN_REMAP = {
++    # target |vx| knots (m/s) → fed |vx| for the walk anchor; 0 → 0, clamped beyond the last knot
++    "targets": (0.10, 0.15, 0.20, 0.25, 0.30, 0.35, 0.40),
++    "fed":     (0.20, 0.30, 0.40, 0.55, 0.70, 0.90, 1.00),
++}
++
+ # Warm start from the deployed walk (see module docstring). Collapses every
+ # velocity-recipe curriculum to its final stage so the loaded walk is trained
+ # under the conditions it was trained under. Set False to train from scratch
+@@ -258,7 +292,7 @@ WARM_START_CHECKPOINT = "model_3750.pt"
+ # Phase boundaries (PPO iterations; env step counter scales by num_steps_per_env=24).
+ # Warm start: the walk exists at iter 0, so fell_over only needs a short
+ # adaptation window to the all-collisions model before falls become data.
+-FELL_OVER_DISABLE_ITER = 100 if WARM_START else 500
++FELL_OVER_DISABLE_ITER = (100 if WARM_START else 500) * SPEED_RAMP_STRETCH
+ 
+ # Fallen gates. LESSON (first rebase training run): the recovery REWARDS must
+ # gate on TILT ONLY. Gating them on low height too made SITTING (z≈0.07, trunk
+@@ -296,7 +330,7 @@ RECOVERED_UP_Z = 0.09
+ # about the walk; it bought a TAX-FREE window (fell_over off at 500 → econ on
+ # at 1200) where natural-fall get-up attempts cost nothing and the dense
+ # progress terms alone could teach them. Run-7 restores it.
+-RECOVERY_ECON_KICKIN_ITER = 600 if WARM_START else 1200
++RECOVERY_ECON_KICKIN_ITER = (600 if WARM_START else 1200) * SPEED_RAMP_STRETCH
+ 
+ # Run-2 fix (1bqctpkq, 0 recoveries @1085 even with the attempt tax relieved):
+ # distill the deployed stand expert into the fallen frames (see distill.py).
+@@ -457,7 +491,7 @@ FALLEN_SMOOTHNESS_SCALE = 0.1
+ 
+ # Servo-protection costs ramp (see docstring). 25% from step 0 keeps the
+ # gradient alive; full weight after the recovery economics are in place.
+-PROTECT_FULL_ITER = RECOVERY_ECON_KICKIN_ITER + 400
++PROTECT_FULL_ITER = RECOVERY_ECON_KICKIN_ITER + 400 * SPEED_RAMP_STRETCH
+ PROTECT_STAGE0_FRAC = 0.25
+ SERVO_IMPACT_WEIGHT = -0.02     # per N above 2 N on servo housings, per step
+ HEAD_IMPACT_WEIGHT = -0.01      # per N above 15 N on the head subtree
+@@ -479,8 +513,8 @@ TOPPLE_PUSH_INTERVAL_S = (4.0, 8.0)
+ TOPPLE_PUSH_STAGES = [
+     {"step": 0,                                          "velocity_range": {"x": (-0.3, 0.3), "y": (-0.3, 0.3)}},
+     {"step": FELL_OVER_DISABLE_ITER * NUM_STEPS_PER_ENV, "velocity_range": {"x": (-0.6, 0.6), "y": (-0.6, 0.6)}},
+-    {"step": 400 * NUM_STEPS_PER_ENV,                    "velocity_range": {"x": (-0.9, 0.9), "y": (-0.9, 0.9)}},
+-    {"step": 800 * NUM_STEPS_PER_ENV,                    "velocity_range": {"x": (-1.2, 1.2), "y": (-1.2, 1.2)}},
++    {"step": 400 * SPEED_RAMP_STRETCH * NUM_STEPS_PER_ENV, "velocity_range": {"x": (-0.9, 0.9), "y": (-0.9, 0.9)}},
++    {"step": 800 * SPEED_RAMP_STRETCH * NUM_STEPS_PER_ENV, "velocity_range": {"x": (-1.2, 1.2), "y": (-1.2, 1.2)}},
+ ]
+ 
+ # Failed-recovery backstop: continuously fallen this long → terminate/reset.
+@@ -503,7 +537,7 @@ FALLEN_TIMEOUT_S = 8.0
+ # fix (2): side_prob puts that fraction of the prone slice ON A SIDE (the
+ # dominant natural fall end-state, 79% in eval); the rest splits by face_down_prob.
+ # Crouch slice 0.15 → 0.20 and from iter 150: it doubles as stand-tall data.
+-_PRONE_ITERS = (150, 700, 1000, 1400) if WARM_START else (800, 1500, 2000, 2500)
++_PRONE_ITERS = tuple(i * SPEED_RAMP_STRETCH for i in ((150, 700, 1000, 1400) if WARM_START else (800, 1500, 2000, 2500)))
+ PRONE_SIDE_PROB = 0.5
+ PRONE_RAMP_STAGES = [
+     {"step": 0,                                   "params": {"prone_prob": 0.00, "face_down_prob": 1.0,  "side_prob": PRONE_SIDE_PROB, "crouch_prob": 0.00}},
+@@ -630,6 +664,12 @@ def make_microduck_velstand_env_cfg(play: bool = False, rough: bool = False) ->
+             params={"std": TRACK_YAW_FINE_STD, "command_name": cfg.rewards["track_angular_velocity"].params["command_name"]},
+         )
+ 
++    if SPEED_STAGE:
++        tw = cfg.commands["twist"]
++        tw.ranges.lin_vel_x = SPEED_LIN_VEL_X
++        tw.ranges.lin_vel_y = SPEED_LIN_VEL_Y
++        cfg.rewards["track_linear_velocity"].weight = SPEED_TRACK_LIN_WEIGHT
++
+     # True full-collision model: the robot can lie on / push off any part, and
+     # the servo housings are named so the impact sensor below can single them
+     # out. 70 collision geoms (vs 11) → more simultaneous contacts in a pile-up;
+@@ -993,6 +1033,7 @@ MicroduckVelStandRlCfg = RslRlOnPolicyRunnerCfg(
+             **({"body_slice": (55, 61)} if ENABLE_BODY_CONTROL else {}),
+             **({"unanchor_turn_in_place": True} if ENABLE_YAW_FIX else {}),
+             **({"anchor_yaw_remap": ANCHOR_YAW_REMAP} if ENABLE_ANCHOR_YAW_REMAP else {}),
++            **({"anchor_lin_remap": ANCHOR_LIN_REMAP} if SPEED_STAGE else {}),
+             **({"expert_mask_cols": TEACHER_MASK_COLS, "expert_mask_tilt_deg": TEACHER_MASK_TILT_DEG} if ENABLE_JOINT_MASKED_TEACHER else {}),
+         } if ENABLE_EXPERT_BC else None,
+     ),
