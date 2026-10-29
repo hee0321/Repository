@@ -2,6 +2,7 @@
 numpy>=1.24
 matplotlib>=3.7
 pillow>=9.0
+imageio-ffmpeg>=0.4   # 운전석·엔진룸 시점 MP4 저장(--view)
 pytest>=7.0
 # 선택: 강화학습 (CPU만으로 충분). torch는 CPU 버전 권장:
 #   pip install torch --index-url https://download.pytorch.org/whl/cpu
