@@ -117,7 +117,13 @@ class AutoDriveEnv(_Base):
         if nx is None:
             return np.inf
         d, sg = nx
-        return d if sg.state(self.t) != "green" else np.inf
+        if sg.state(self.t) == "green":
+            return np.inf
+        # 빨간불 우회전: 정지선 앞에서 한 번 멈췄으면(우회전 일시정지 완료) 더 멈출 필요 없음 → 관측에서도 '정지 필요 없음'
+        if sg.right_turn and sg.state(self.t) == "red" and \
+                (self.rules.signals.index(sg), sg.phase_id(self.t)) in self.vlog._rt_stopped:
+            return np.inf
+        return d
 
     def edge_clearance(self):
         return self.track.width / 2 - abs(self._d) - self.params.car_width / 2
