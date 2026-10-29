@@ -125,6 +125,15 @@ class AutoDriveEnv(_Base):
             return np.inf
         return d
 
+    def limit_ahead(self, s):
+        """관측용 '지금 지켜야 할 제한속도': 앞쪽 제한속도가 낮아지는 곳(예: 어린이보호구역 30)까지
+        2 m/s² 로 줄여 맞출 수 있는 속도와 현재 제한속도 중 작은 값 (기준 제어기의 '앞 구간 미리 보기'와 같은 정보).
+        예전엔 현재 지점 제한속도만 보여서, 정책이 보호구역에 들어선 뒤에야 감속해 1~2초 과속했음."""
+        dl, lims = self.rules.limits_ahead(s, 60.0)
+        if not len(lims):
+            return self.rules.limit_at(s)
+        return float(min(self.rules.limit_at(s), np.min(np.sqrt(lims ** 2 + 2 * 2.0 * np.maximum(dl - 3.0, 0)))))
+
     def edge_clearance(self):
         return self.track.width / 2 - abs(self._d) - self.params.car_width / 2
 
@@ -146,7 +155,7 @@ class AutoDriveEnv(_Base):
         obs = np.concatenate([
             self.lidar_ranges / 30.0,
             [c.v / p.max_speed, c.steer / p.max_steer, (d - self._dref) / (self.track.width / 2), np.sin(he), np.cos(he),
-             self.rules.limit_at(s) / p.max_speed, min(stop, 100.0) / 100.0,
+             self.limit_ahead(s) / p.max_speed, min(stop, 100.0) / 100.0,
              np.clip(self.track.curvature_ahead(s, 15.0) * 5.0, 0, 2)],
             lead,
             [self.params.mu, self.track.width / 8.0, self.sight / 150.0, self.rules.light,

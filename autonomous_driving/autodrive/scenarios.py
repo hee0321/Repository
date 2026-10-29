@@ -24,7 +24,8 @@ def _synthetic(kind):
 
 
 # 고정 벤치마크. 바꾸면 리더보드 점수가 예전 것과 비교가 안 되므로 버전을 올린다.
-BENCH_VERSION = "v2"  # v2: 시골길 농기계 → 일반 차량 흐름, 실제 OSM 시골길(양평 정배리) 3개 + 넓은 시골길 앞지르기 추가
+BENCH_VERSION = "v2.1"  # v2.1: 관측의 제한속도를 앞 구간 미리 보기 값으로 (시나리오는 v2와 같음, 최고 모델 다시 평가)
+_V2_NOTE = "v2"  # v2: 시골길 농기계 → 일반 차량 흐름, 실제 OSM 시골길(양평 정배리) 3개 + 넓은 시골길 앞지르기 추가
 BENCHMARK = {
     "oval_easy":      dict(kind="oval_easy", laps=1),
     "default_2laps":  dict(kind="default", laps=2),

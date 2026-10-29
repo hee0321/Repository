@@ -11,3 +11,4 @@
 | 2026-10-30 05:55 | cycle8-rural-mix(ppo) | 64.44 | 73.46 | 53.17 | 12/18 | 6 | 3 | 4.7 | 4.7 | 0.25 | 1 | no | 7.7 | gangnam_reverse: 신호·우회전 위반 증가 0→1; gangnam_reverse: 점수 크게 하락 16.44→8.8; rural_curvy: 충돌 증가; rural_wide_traffic: 새로 이탈; r |
 | 2026-10-30 06:02 | cycle9-rural-mix(ppo) | 88.63 | 83.98 | 94.45 | 17/18 | 1 | 1 | 6.5 | 6.5 | 0.246 | 2 | no | 7.1 | gangnam_reverse: 신호·우회전 위반 증가 0→1; gangnam_reverse: 어린이보호구역 과속 증가 0.0→1.15s |
 | 2026-10-30 06:11 | cycle10-rural-mix(ppo) | 83.22 | 81.42 | 85.46 | 16/18 | 2 | 2 | 6.7 | 6.7 | 0.279 | 3 | no | 7.1 | gangnam_reverse: 신호·우회전 위반 증가 0→1; gangnam_traffic: 어린이보호구역 과속 증가 0.5→1.75s; gangnam_traffic: 시골길 위험 행동 증가; gangnam_traf |
+| 2026-10-30 06:23 | cycle11-rural-mix(bc) | 82.65 | 82.43 | 82.92 | 16/18 | 2 | 2 | 6.6 | 6.6 | 0.262 | 2 | no | 7.1 | gangnam_reverse: 신호·우회전 위반 증가 0→1; gangnam_reverse: 어린이보호구역 과속 증가 0.0→1.2s; rural_wide_traffic: 새로 이탈; rural_wide_traffi |

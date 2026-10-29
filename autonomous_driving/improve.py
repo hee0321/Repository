@@ -35,8 +35,9 @@ BEST = os.path.join(W, "best.zip")
 STATS = os.path.join(W, "obs_stats.npz")
 FAIL = os.path.join(R, "failures.jsonl")
 # 벤치마크 버전마다 리더보드 파일을 나눈다 (v1 = 예전 시골길(트랙터) 점수, v2 = 일반 차량 흐름 + 실제 OSM 시골길)
-LB_CSV = os.path.join(R, "leaderboard.csv" if BENCH_VERSION == "v1" else f"leaderboard_{BENCH_VERSION}.csv")
-LB_MD = os.path.join(R, "leaderboard.md" if BENCH_VERSION == "v1" else f"leaderboard_{BENCH_VERSION}.md")
+_BV = BENCH_VERSION.split(".")[0]   # v2.1 도 v2 리더보드에 이어 씀 (시나리오 같음)
+LB_CSV = os.path.join(R, "leaderboard.csv" if _BV == "v1" else f"leaderboard_{_BV}.csv")
+LB_MD = os.path.join(R, "leaderboard.md" if _BV == "v1" else f"leaderboard_{_BV}.md")
 BEST_CARD = os.path.join(R, "best_scorecard.json")
 
 
@@ -258,7 +259,7 @@ def cycle(args, k, log=log_print):
             if os.path.exists(prev):
                 pc = json.load(open(prev, encoding="utf-8"))
                 src = os.path.join(W, f"cand_{k - 1}_{pc.get('candidate', 'ppo')}.zip")
-                if pc.get("bench") == BENCH_VERSION and pc["total"] > best_card["total"] and os.path.exists(src):
+                if str(pc.get("bench", "")).split(".")[0] == _BV and pc["total"] > best_card["total"] and os.path.exists(src):
                     init = src
                     log(f"  초기값: 직전 후보 {src} (총점 {pc['total']}) — 승격 판단은 최고 모델과 비교")
         model = PPO.load(init, env=make_venv(3, load_failures(), args.n_envs, args.seed + k, mixed=mixed), device="cpu")
