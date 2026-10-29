@@ -5,7 +5,11 @@
     python autopilot.py --scenario track --model best            # 합성 서킷
     python autopilot.py --scenario rural_night --model best      # 시골길 밤
     python autopilot.py --scenario gangnam_traffic --model none  # 모델 없이 기준 제어기
+    python autopilot.py --scenario rural_night --view driver     # 운전석 1인칭 시점 영상(MP4+GIF)
+    python autopilot.py --scenario rural --view both              # 운전석 + 위에서 본 지도 나란히
+    python autopilot.py --scenario rural_night --view all         # 2×2: 운전석·지도·엔진룸·위성
 출력: media/autopilot_<시나리오>.gif / .mp4 / .html(재생기), results/autopilot_<시나리오>_events.jsonl
+      --view driver|engine|satellite|both|all 이면 media/autopilot_<시나리오>_<view>.mp4 / .gif
 """
 from __future__ import annotations
 
@@ -177,6 +181,27 @@ class Autopilot:
         return a, why
 
 
+def rural_cars(env, seed=0):
+    """시골길 시나리오의 트랙터·경운기를 일반 차로 바꾸고 마주 오는 차를 더한다(영상 데모용).
+    (시골길 생성기에서 농기계를 빼는 작업은 autodrive/init 쪽에서 따로 진행 중 — 그게 들어오면 이 옵션은 차만 더함)"""
+    if not env.rules.rural:
+        return 0
+    rng = np.random.default_rng(seed + 101)
+    L, half = env.track.length, env.track.width / 2
+    narrow = env.track.width < 6.0
+    specs, n = [], 0
+    for o in env.obstacle_specs:
+        if o.get("kind") == "tractor":
+            o = dict(o, kind="car", v=float(rng.uniform(7.0, 9.0)), r=0.9, l=4.3); n += 1
+        specs.append(o)
+    have = sum(1 for o in specs if o.get("kind") == "oncoming")
+    for frac in (0.18, 0.42, 0.66)[:max(0, 3 - have)]:
+        specs.append(dict(kind="oncoming", s=float(frac * L + rng.uniform(-20, 20)),
+                          d=(half - 1.0) if narrow else 1.6, v=-float(rng.uniform(6.0, 8.0)), r=0.9, l=4.3)); n += 1
+    env.obstacle_specs = specs
+    return n
+
+
 def signal_state(env):
     nx = env.rules.next_signal(env._s, 150.0)
     if nx is None:
@@ -189,6 +214,9 @@ def run(args):
     spec = ALL_BENCH[name]
     cfg = load_yaml(os.path.join(HERE, "rules", "autopilot.yaml"))
     env = make_env(spec, seed=args.seed)
+    if getattr(args, "rural_cars", False):
+        k = rural_cars(env, args.seed)
+        print(f"시골길 차량: 트랙터 → 일반 차, 마주 오는 차 추가 ({k}대 바뀜/추가)")
     model, stats, why_mode = None, None, ""
     path = os.path.join("weights", "best.zip") if args.model == "best" else args.model
     if args.model != "none" and path and os.path.exists(path):
@@ -204,6 +232,11 @@ def run(args):
     ap = Autopilot(env, model, cfg, stats, alert_cmd=args.alert_cmd, quiet=args.quiet)
     obs, info = env.reset(seed=args.seed)
     frames, done, steps_auto, steps = [], False, 0, 0
+    view = getattr(args, "view", "top")
+    rec = None
+    if view != "top":
+        from autodrive.views import StateRecorder
+        rec = StateRecorder(env)
     t0 = time.time()
     while not done:
         a, why = ap.step(obs)
@@ -211,6 +244,8 @@ def run(args):
         steps += 1
         steps_auto += why["mode"] == "AUTONOMOUS"
         st, sd = signal_state(env)
+        if rec is not None:
+            rec.record(env, a, {**why, "n_events": len(ap.events)})
         if steps % args.every == 0 or term or trunc:
             frames.append({
                 "t": round(env.t, 2), "x": round(env.car.x, 2), "y": round(env.car.y, 2), "yaw": round(env.car.yaw, 3),
@@ -244,8 +279,15 @@ def run(args):
           f"자율 비율 {summary['autonomous_share'] * 100:.0f}%, 개입 요청 {summary['takeovers']}회, 안전 정지 {summary['safe_stops']}회")
     print("  위반:", {k: x for k, x in v.items() if x})
     os.makedirs(args.out, exist_ok=True)
-    from autodrive.viz import render_autopilot
-    outs = render_autopilot(env, frames, name, args.out, gif=not args.no_gif, mp4=args.mp4, html=not args.no_html)
+    if rec is not None:
+        from autodrive.views import pick_window, render_views
+        t0, t1 = pick_window(rec.rows, args.clip_seconds, args.clip_start)
+        print(f"  영상 구간 {t0:.1f}~{t1:.1f}s, {args.fps:g} fps, 보기 '{view}'")
+        outs = render_views(env, rec.rows, rec.kinds, view, os.path.join(args.out, f"autopilot_{name}_{view}"),
+                            fps=args.fps, t0=t0, t1=t1, gif=not args.no_gif, still_at=args.still_at)
+    else:
+        from autodrive.viz import render_autopilot
+        outs = render_autopilot(env, frames, name, args.out, gif=not args.no_gif, mp4=args.mp4, html=not args.no_html)
     for o in outs:
         print("  저장:", o, f"({os.path.getsize(o) / 1e6:.2f} MB)")
     return summary
@@ -265,4 +307,12 @@ if __name__ == "__main__":
     ap.add_argument("--realtime", action="store_true", help="실제 시간 속도로 돌기(스텝마다 dt 기다림)")
     ap.add_argument("--alert-cmd", default=None, help="개입 요청 때 실행할 명령 (예: 'notify-send 개입')")
     ap.add_argument("--quiet", action="store_true")
+    ap.add_argument("--view", default="top", choices=["top", "driver", "engine", "satellite", "both", "all"],
+                    help="top=기존 지도+판단 근거 화면, driver=운전석 1인칭, engine=엔진룸(단순 모델 시각화), "
+                         "satellite=위성(모듈 없으면 지도), both=운전석+지도, all=2×2")
+    ap.add_argument("--clip-seconds", type=float, default=18.0, help="영상 길이(초). 0이면 전체")
+    ap.add_argument("--clip-start", type=float, default=None, help="영상 시작(초). 없으면 볼거리 많은 구간 자동 선택")
+    ap.add_argument("--fps", type=float, default=25.0, help="영상 fps (시뮬레이션 20 Hz를 보간)")
+    ap.add_argument("--still-at", type=float, default=None, help="이 시각 프레임을 PNG로도 저장")
+    ap.add_argument("--rural-cars", action="store_true", help="시골길 트랙터를 일반 차로 바꾸고 마주 오는 차 추가(영상용)")
     run(ap.parse_args())

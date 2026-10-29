@@ -2,6 +2,8 @@
 
 예) python render_episode.py                       # Pure Pursuit, media/ 에 저장
     python render_episode.py --policy weights/ppo_autodrive.zip   # 학습한 PPO 정책
+    python render_episode.py --view driver             # 운전석 1인칭 시점 MP4/GIF
+    python render_episode.py --view all                # 2×2: 운전석·지도·엔진룸(단순 모델 시각화)·위성
 """
 import argparse
 import os
@@ -15,7 +17,7 @@ from matplotlib.animation import FuncAnimation, PillowWriter  # noqa: E402
 from autodrive import AutoDriveEnv, PurePursuitController  # noqa: E402
 
 
-def rollout(policy_path=None, laps=1, seed=0):
+def rollout(policy_path=None, laps=1, seed=0, recorder=False):
     env = AutoDriveEnv(target_laps=laps, max_steps=6000, seed=seed)
     if policy_path:
         from stable_baselines3 import PPO
@@ -28,12 +30,21 @@ def rollout(policy_path=None, laps=1, seed=0):
         name = "Pure Pursuit"
     obs, info = env.reset(seed=seed)
     frames = []
+    rec = None
+    if recorder:
+        from autodrive.views import StateRecorder
+        rec = StateRecorder(env)
     done = False
     while not done:
-        obs, r, term, trunc, info = env.step(act(obs))
+        a = act(obs)
+        obs, r, term, trunc, info = env.step(a)
+        if rec is not None:
+            rec.record(env, a, {"mode": "BASELINE" if not policy_path else "AUTONOMOUS"})
         c = env.car
         frames.append((c.x, c.y, c.yaw, c.v, env.lidar_ranges.copy(), info["laps"], info["t"], info["crashed"]))
         done = term or trunc
+    if recorder:
+        return env, frames, name, rec
     return env, frames, name
 
 
@@ -105,8 +116,20 @@ if __name__ == "__main__":
     ap.add_argument("--laps", type=int, default=1)
     ap.add_argument("--out", default="media")
     ap.add_argument("--no-gif", action="store_true")
+    ap.add_argument("--view", default="top", choices=["top", "driver", "engine", "satellite", "both", "all"])
+    ap.add_argument("--clip-seconds", type=float, default=18.0)
+    ap.add_argument("--fps", type=float, default=25.0)
     a = ap.parse_args()
     os.makedirs(a.out, exist_ok=True)
+    if a.view != "top":
+        from autodrive.views import pick_window, render_views
+        env, frames, name, rec = rollout(a.policy, a.laps, recorder=True)
+        t0, t1 = pick_window(rec.rows, a.clip_seconds)
+        tag = "ppo" if a.policy else "pure_pursuit"
+        for o in render_views(env, rec.rows, rec.kinds, a.view, os.path.join(a.out, f"{tag}_{a.view}"), fps=a.fps,
+                              t0=t0, t1=t1, gif=not a.no_gif):
+            print("저장:", o, f"({os.path.getsize(o) / 1e6:.2f} MB)")
+        raise SystemExit(0)
     env, frames, name = rollout(a.policy, a.laps)
     tag = "ppo" if a.policy else "pure_pursuit"
     png = os.path.join(a.out, f"{tag}_trajectory.png")
