@@ -1,0 +1,39 @@
+# 한국 도로교통 규칙(시뮬레이터용으로 단순화). 실제 법규 해석이 아니라 연습용 설정이에요.
+traffic_side: right            # 우측 통행: 오른쪽 차로 가운데를 목표로 달림
+lane_width_m: 3.2
+speed_limits_kmh:              # 안전속도 5030 (OSM maxspeed 태그가 있으면 그 값을 우선)
+  trunk: 60                    # 도시고속화도로 (태그 없을 때)
+  primary: 50
+  secondary: 50
+  tertiary: 50
+  residential: 30              # 주택가·이면도로
+  living_street: 30
+  unclassified: 30
+school_zone:                   # 어린이보호구역
+  limit_kmh: 30
+  radius_m: 300                # OSM에 구역 태그가 없으면 초등학교·유치원·어린이집 300 m 안 도로를 보호구역으로 봄
+  facilities: [초등학교, 유치원, 어린이집]
+speeding_tolerance_kmh: 3      # 이 값보다 더 빠르면 과속으로 기록
+traffic_signal:
+  green_s: 25
+  yellow_s: 3
+  red_s: 20
+  stop_line_before_m: 3
+right_turn_stop:               # 우회전 일시정지: 빨간불(차량 신호)일 때 우회전하려면 정지선에서 완전히 멈춘 뒤 천천히
+  enabled: true
+  detect_turn_rad: 0.6         # 신호 뒤 30 m 안에서 이만큼 오른쪽으로 꺾이면 우회전으로 봄
+  stop_speed_mps: 0.3
+  max_turn_speed_kmh: 15
+centerline:                    # 양방향 도로에서 차 왼쪽 끝이 중앙선을 넘으면 중앙선 침범
+  margin_m: 0.3
+rural:                         # 시골길(도시 밖 일반도로·농로·마을길)
+  general_limit_kmh: 60        # 도로교통법 시행규칙 제19조: 주거·상업·공업지역 외 일반도로 편도 1차로 60 km/h
+  narrow_limit_kmh: 40         # 폭 좁은 1차로(중앙선 없음) 농로·마을길: 표지로 30~40 km/h인 곳이 많아 40으로 둠
+  village_school_limit_kmh: 30 # 마을 어린이보호구역
+  reaction_time_s: 1.0         # 시야 거리 안에서 멈출 수 있는 속도 계산용
+  safe_decel_mps2: 4.0
+  min_edge_clearance_m: 0.25   # 길 가장자리(농수로·낭떠러지)와 이보다 가까우면 위험
+  meet_speed_kmh: 15           # 좁은 길에서 마주 오는 차와 엇갈릴 때 최대 속도
+  ped_pass_clearance_m: 1.0    # 보행자 옆을 지날 때 띄울 거리
+  ped_pass_speed_kmh: 20
+  overtake_min_sight_m: 100    # 앞지르기는 이만큼 앞이 보이고 마주 오는 차가 없을 때만
