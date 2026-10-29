@@ -1,9 +1,11 @@
-"""운동학적 자전거 모델 (kinematic bicycle model) + 간단한 노면 마찰 한계."""
+"""운동학적 자전거 모델 (kinematic bicycle model) + 간단한 노면 마찰 한계 + 전기차 에너지 계산(ev.py)."""
 from __future__ import annotations
 
 from dataclasses import dataclass
 
 import numpy as np
+
+from .ev import EVPowertrain
 
 G = 9.81
 
@@ -34,6 +36,9 @@ class BicycleCar:
         self.steer = 0.0
         self.slipping = False
         self.lat_acc = 0.0
+        self.accel = 0.0
+        # 전기차 구동계: 에너지·토크·회생제동 계산만 한다(움직임에는 영향 없음 → 점수·규칙 그대로)
+        self.ev = EVPowertrain()
 
     @property
     def pos(self) -> np.ndarray:
@@ -53,4 +58,7 @@ class BicycleCar:
         self.x += self.v * np.cos(self.yaw) * dt
         self.y += self.v * np.sin(self.yaw) * dt
         self.yaw = float(np.angle(np.exp(1j * (self.yaw + yaw_rate * dt))))
+        v0 = self.v
         self.v = float(np.clip(self.v + a * dt, 0.0, p.max_speed))
+        self.accel = (self.v - v0) / dt
+        self.ev.step(0.5 * (v0 + self.v), self.accel, dt)

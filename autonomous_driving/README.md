@@ -12,7 +12,8 @@ numpy·matplotlib 중심이라 **CPU만으로** 돌아가고, GPU·유료 서비
 3. **시골길**(좁은 1차로·비포장·밤·트랙터·보행자·마주 오는 차) 절차 생성 도로
 4. **개선 반복**: `improve.py` 한 번이면 학습 → 벤치마크 → 나빠진 곳 없을 때만 최고 모델 교체 → 리더보드 기록 → [`docs/발전전략.md`](docs/발전전략.md)
 5. **자율 주행 모드**: `autopilot.py`가 학습 모델로 운전하고, 위험하면 '인간 개입 요청'을 띄우고 기준 제어기/안전 정지로 넘김
-6. **운전석 시점·엔진룸·2×2 화면**: `--view driver|top|engine|satellite|both|all` → [아래](#운전석-시점엔진룸-화면---view)
+6. **전기차 + 운전석 중심 화면**(기본): 큰 운전석 시점 + 미니멀 HUD(속도·제한속도·배터리·전력) + 반투명 미니맵,
+   모터룸·위성은 필요할 때만(`--show`), 예전 2×2는 `--layout grid` → [아래](#운전석-중심-화면전기차-모터룸---layout---view)
 
 ## 빠르게 실행
 
@@ -50,7 +51,8 @@ python -m pytest tests -q                 # 점검 (약 10초)
 | `autodrive/scenarios.py` | 벤치마크·학습 시나리오(커리큘럼, 도메인 무작위화) |
 | `autodrive/bench.py` | 점수표·승격 판단 |
 | `autodrive/viz.py` | 자율 주행 재생(GIF/MP4/HTML) |
-| `autodrive/views/` | 운전석 1인칭·위에서 본 지도·엔진룸(단순 모델 시각화)·위성 패널, 보간·MP4/GIF (`--view`) |
+| `autodrive/ev.py` | 전기차 구동계 에너지 계산(즉각 토크·단일 감속기·회생제동+마찰 블렌딩·배터리 SOC) — 움직임·점수에는 영향 없음 |
+| `autodrive/views/` | 운전석 중심 화면(`hud.py`, 키 조작 `ui.py`)·운전석 1인칭·지도·전기차 모터룸(단순 모델 시각화)·위성 패널, 보간·MP4/GIF |
 | `improve.py` | 개선 사이클 (DAgger/BC → PPO → 평가 → 승격 → 리더보드·실패 사례) |
 | `autopilot.py`, `rules/autopilot.yaml` | 자율 주행 모드 + 안전 감시기 |
 | `train_ppo.py` | (예전) 단순 PPO 학습 예시 |
@@ -134,25 +136,42 @@ python -m pytest tests -q                 # 점검 (약 10초)
 - 시골길 밤: 도시에서만 배운 모델이라 출발하자마자 '처음 보는 상황(OOD)'이 떠서 끝까지 기준 제어기가 운전(자율 0%) — 의도한 안전 동작.
 
 
-## 운전석 시점·엔진룸 화면 (`--view`)
+## 운전석 중심 화면·전기차 모터룸 (`--layout`, `--view`)
 
-![운전석 시점 — 시골길 낮](media/driver_view_rural_still.png)
+![운전석 중심 화면 — 시골길 낮](media/driver_main_still.png)
 
-내가 직접 운전하는 것처럼 보는 **운전석 1인칭 시점**과, 2×2로 함께 보는 화면이에요. numpy + Pillow만 써서 CPU로 돌아가고
-(GPU·3D 엔진 없음), 시뮬레이션(20 Hz)을 보간해서 **25 fps MP4 + GIF**로 저장해요.
+시뮬레이터 차는 이제 **전기차**예요. 기본 화면은 **운전석 중심 미니멀 화면**이에요(평평한 색·둥근 모서리·적은 정보):
+큰 운전석 시점 위에 큰 디지털 속도, P R N D, 제한속도 표지, 배터리 SOC 막대·주행 가능 거리, 전력 막대(회생은 초록 음수 kW),
+오른쪽 아래 반투명 미니맵(진행 방향 위쪽, 갈 길 파란 선). 자율 주행은 작은 점 표시, **개입 요청·안전 정지는 빨간 띠**로 확실히 보여요.
+모터룸·위성은 기본으로 숨기고 필요할 때만 오른쪽에 작은 카드로 밀려 들어와요. numpy + Pillow만 써서 CPU로 돌아가고(GPU·3D 엔진 없음),
+시뮬레이션(20 Hz)을 보간해서 **25 fps MP4 + GIF**로 저장해요.
 
 ```bash
-python autopilot.py --scenario rural_night --view driver --rural-cars      # 시골 밤 자갈길, 운전석 시점
+python autopilot.py --scenario rural --rural-cars --force                  # 기본: 운전석 중심 화면 (1280×720)
+python autopilot.py --scenario rural --rural-cars --show motor,satellite   # 모터룸·위성 작은 카드도
+python autopilot.py --scenario rural --main top                            # 큰 화면 바꾸기: driver|top|motor|satellite
+python autopilot.py --scenario rural --layout grid --rural-cars --force    # 예전 2×2: 운전석·지도·모터룸·위성 (= --view all)
+python autopilot.py --scenario rural --interactive                         # 창 띄워 실시간(아래 키)
+python autopilot.py --scenario rural_night --view driver --rural-cars      # 운전석 한 장(옛 계기판 포함)
 python autopilot.py --scenario rural --view both --rural-cars              # 운전석 + 위에서 본 지도 나란히
-python autopilot.py --scenario rural --view all --rural-cars --force       # 2×2: 운전석·지도·엔진룸·위성
 python autopilot.py --scenario gangnam_traffic --view both --clip-start 68 # 강남역 신호 교차로 구간
+python autopilot.py --scenario gangnam --view top                          # 예전 지도+판단 근거 GIF/HTML 재생기
 python render_episode.py --view driver                                     # 합성 서킷
 ```
 
-- 출력: `media/autopilot_<시나리오>_<view>.mp4` / `.gif`(8 MB 넘으면 자동으로 줄임), `--still-at 초`면 `_still.png`도.
+- `--view main|top|driver|motor|engine|satellite|both|all` (기본 `main`; `engine`은 `motor`의 옛 이름), `--layout main|grid`(기본 `main`),
+  `--main driver|top|motor|satellite`, `--show motor,satellite`(기본 숨김, 영상 처음 0.8초 동안 밀려 들어옴).
+- `--interactive` 키(matplotlib 창): `m`/`Tab` 큰 화면 바꾸기, `1` 모터룸 카드, `2` 위성 카드(밀려 들어옴/나감), `g` 운전석 중심 ↔ 2×2, `space` 멈춤, `q` 끝.
+- 출력: `media/autopilot_<시나리오>_<view>.mp4` / `.gif`(기본 view는 `main`, 8 MB 넘으면 자동으로 줄임), `--still-at 초`면 `_still.png`도.
 - `--clip-seconds 18`(0이면 전체), `--clip-start`(없으면 차·보행자·자갈길·개입 요청·신호가 많은 구간 자동 선택), `--fps 25`.
 - `--rural-cars`: 시골길의 트랙터·경운기를 **일반 차**로 바꾸고 마주 오는 차를 더해요(농기계는 시골길 시나리오에서 빼는 중).
   화면에서도 트랙터는 일반 차로 그려요.
+
+**전기차 구동계** (`autodrive/ev.py`) — 에너지 계산용 단순 모델. 차의 움직임(가속도 명령 → 속도)은 그대로라
+**주행 결과·점수표·한국 규칙·PPO는 바뀌지 않아요**(기준 제어기 96.97 / 최고 모델 57.67, 바꾸기 전후 시나리오별 점수 똑같음).
+- 즉각 토크: 단일 감속기 9.0:1(변속·공회전 RPM 없음), 모터 최대 350 N·m·150 kW, 바퀴 반지름 0.33 m → 0 km/h부터 바로 최대 가속, 토크 응답 0.03 s.
+- 회생제동: 감속에 필요한 힘을 먼저 모터로 받고(최대 60 kW·2.0 m/s², 약 9 km/h 아래에서 줄어듦) 모자라면 마찰 브레이크가 보태요(블렌딩). 회생 효율 70 %.
+- 배터리 64 kWh, 처음 SOC 80 %: 모터 출력/90 % + 보조 0.4 kW만큼 줄고 회생만큼 늘어요. 질량 1900 kg, Cd·A 0.62, 구름저항 0.011.
 
 **운전석 시점** (`autodrive/views/driver.py`)
 - 카메라: 뒤축 기준 앞 1.3 m, **왼쪽 0.37 m(한국 차 운전석)**, 눈높이 1.25 m, 수평 시야각 90°, 1.5° 아래로.
@@ -163,17 +182,16 @@ python render_episode.py --view driver                                     # 합
 - 다른 차는 3D 상자(가까운 것이 먼 것을 가림), 보행자(밤 반사띠), 길가 물건, 신호등(한국식 가로형 4구), 제한속도·어린이보호구역 표지.
 - 차 안: 보닛·A필러, 계기판(속도계 + 제한속도 빨간 눈금, 제한속도 표지, 핸들 각도 = 조향각×15), 모드 배너(AUTONOMOUS / TAKEOVER 깜빡임 / SAFE STOP / BASELINE)와 위험 이유, 위에서 본 미니맵.
 
-**엔진룸** (`autodrive/views/engine.py`) — ⚠ **단순 모델 기반 시각화(실제 엔진 모델 아님)**
+**모터룸(전기차)** (`autodrive/views/motor.py`, 옛 `engine.py`는 별칭) — ⚠ **단순 모델 기반 시각화(실제 차량 모델 아님)**
 
-![엔진룸](media/engine_view_still.png)
+![모터룸](media/motor_view_still.png)
 
-시뮬레이터 차는 엔진 없이 가속도 명령을 바로 받아요. 그래서 이 화면은 실제 시뮬레이터 신호로 움직이는 그림이에요.
-- RPM·기어: 속도 + 5단 기어비(3.5/2.1/1.4/1.0/0.8) × 최종 4.0, 바퀴 반지름 0.31 m, 간단한 자동 변속 → 직렬 4기통 피스톤·크랭크(화면은 1/40 속도), 점화 순서 1-3-4-2
-- 스로틀 밸브 = 가속 명령, 브레이크 캘리퍼 색 = 브레이크 명령 + 디스크 온도(장난감 모델)
-- 스티어링 랙·앞바퀴 각도 = 실제 조향각, 서스펜션 흔들림 = 자갈길·속도·미끄러짐
-- 냉각수 온도·팬 = 장난감 열 모델(부하↑ 오름, 주행풍·팬이 식힘)
+- 구동 모터(회전자, 1/40 속도로 그림)·RPM·토크·출력 kW(회생은 음수), 인버터(DC↔AC), 1단 감속기 기어, 바닥 배터리 팩(SOC·충전/방전 kW·사용/회생 Wh)
+- 고전압 케이블 전력 흐름 점: 주황 = 배터리 → 모터, 초록 = 회생(모터 → 배터리), "회생제동 ○ kW → 배터리" 표시
+- 마찰 브레이크 캘리퍼 색 = 회생 한계를 넘는 감속 몫(블렌딩), 스티어링 랙·앞바퀴 각도 = 실제 조향각, 서스펜션 흔들림 = 자갈길·속도·미끄러짐
+- 운전석 한 장(`--view driver`) 계기판에도 RPM·기어 대신 전력 kW·배터리 %를 보여요.
 
-**2×2 화면** (`--view all`): 운전석 | 위에서 본 지도 / 엔진룸 | 위성.
+**2×2 화면** (`--layout grid` = `--view all`): 운전석 | 위에서 본 지도 / 모터룸 | 위성.
 위성 패널은 `autonomous_driving/satellite/` 모듈(다른 브랜치에서 개발 중)이 있으면 불러 쓰고, 없으면 지도를 보여 주며 "위성 영상 없음"이라고 적어요.
 모듈 쪽 약속: `render_panel(env, frame, (W, H))` → 이미지, 또는 `background(env, frame, (W, H), meters_per_px)` → 차 중심 배경 이미지(위에 도로·차를 덧그림).
 
@@ -181,6 +199,7 @@ python render_episode.py --view driver                                     # 합
 
 한계: 땅은 평평하게 그려요(언덕 꼭대기 시야 제한은 시야 거리 숫자로만), 그림자·반사 없음, 건물·나무는 장식(시뮬레이터 충돌과 무관),
 다른 차는 상자 모양, 위성 패널은 아직 대체 지도.
+전기차 수치는 그럴듯한 값이지 특정 차가 아니고, 차 움직임은 예전 가속도 명령 그대로라 모터 출력 한계·회생 감속감은 에너지 계산과 화면에만 들어가요(점수 보존). `--interactive`는 화면이 있는 PC에서 matplotlib 창으로 떠요(상자에서는 영상 저장으로 확인).
 
 ## 다음에 해 볼 것
 

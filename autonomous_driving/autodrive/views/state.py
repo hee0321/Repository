@@ -4,7 +4,10 @@ from __future__ import annotations
 import numpy as np
 
 # 보간할 연속 값 / 가장 가까운 스텝 값을 쓸 이산 값
-CONT = ("t", "x", "y", "v", "steer", "steer_cmd", "accel_cmd", "s", "d", "limit", "mu", "sight", "lat_acc")
+CONT = ("t", "x", "y", "v", "steer", "steer_cmd", "accel_cmd", "s", "d", "limit", "mu", "sight", "lat_acc",
+        "acc", "soc", "torque", "motor_rpm", "p_motor_kw", "p_bat_kw", "regen_kw", "fric_kw", "fric_frac",
+        "e_used_wh", "e_regen_wh")
+EV_KEYS = ("soc", "torque", "motor_rpm", "p_motor_kw", "p_bat_kw", "regen_kw", "fric_kw", "fric_frac", "e_used_wh", "e_regen_wh")
 DISC = ("mode", "risks", "school", "gravel", "slipping", "n_events", "ttc")
 
 
@@ -38,7 +41,16 @@ class StateRecorder:
             "mode": why.get("mode", "BASELINE"), "risks": list(why.get("risks", [])),
             "school": env.rules.school_at(env._s), "gravel": env.rules.gravel_at(env._s), "slipping": c.slipping,
             "n_events": why.get("n_events", 0), "ttc": None if ttc is None or not np.isfinite(ttc) else float(ttc),
-            "sig_d": None if nx is None else float(nx[0]), "ob": ob})
+            "sig_d": None if nx is None else float(nx[0]), "ob": ob,
+            "acc": float(getattr(c, "accel", 0.0)), **ev_snapshot(c)})
+
+
+def ev_snapshot(car):
+    """전기차 구동계 값(없는 옛 차 객체면 0)."""
+    ev = getattr(car, "ev", None)
+    if ev is None:
+        return {k: (0.8 if k == "soc" else 0.0) for k in EV_KEYS}
+    return {k: float(v) for k, v in ev.snapshot().items()}
 
 
 def _lerp_angle(a, b, w):

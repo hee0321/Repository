@@ -3,7 +3,8 @@
 예) python render_episode.py                       # Pure Pursuit, media/ 에 저장
     python render_episode.py --policy weights/ppo_autodrive.zip   # 학습한 PPO 정책
     python render_episode.py --view driver             # 운전석 1인칭 시점 MP4/GIF
-    python render_episode.py --view all                # 2×2: 운전석·지도·엔진룸(단순 모델 시각화)·위성
+    python render_episode.py --view main               # 운전석 중심 화면(HUD·미니맵, 전기차)
+    python render_episode.py --view all                # 2×2: 운전석·지도·모터룸(단순 모델 시각화)·위성
 """
 import argparse
 import os
@@ -116,7 +117,7 @@ if __name__ == "__main__":
     ap.add_argument("--laps", type=int, default=1)
     ap.add_argument("--out", default="media")
     ap.add_argument("--no-gif", action="store_true")
-    ap.add_argument("--view", default="top", choices=["top", "driver", "engine", "satellite", "both", "all"])
+    ap.add_argument("--view", default="top", choices=["top", "main", "driver", "engine", "motor", "satellite", "both", "all"])
     ap.add_argument("--clip-seconds", type=float, default=18.0)
     ap.add_argument("--fps", type=float, default=25.0)
     a = ap.parse_args()

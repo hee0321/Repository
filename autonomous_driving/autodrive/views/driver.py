@@ -106,8 +106,11 @@ def clip_near(C):
 
 
 class DriverView:
-    def __init__(self, env, W=640, H=360, kinds=None):
+    def __init__(self, env, W=640, H=360, kinds=None, hud="classic"):
+        """hud="classic": 계기판·배너·미니맵을 이 화면 안에 그림(2×2 화면용).
+        hud="minimal": 도로 장면만 그림(운전석 중심 화면은 hud.py가 깔끔한 HUD를 따로 얹음)."""
         self.env = env
+        self.hud = hud
         self.tr, self.rules = env.track, env.rules
         self.W, self.H = W, H
         self.cam = Camera(W, H)
@@ -593,10 +596,14 @@ class DriverView:
         lines.append(("자갈길(비포장) · 마찰 %.2f" % f["mu"]) if f["gravel"] else ("포장도로 · 마찰 %.2f" % f["mu"]))
         lines.append(f"시야 {f['sight']:.0f} m" + ("   · 밤(가로등 없음)" if self.night else ""))
         lines.append("앞차·장애물 TTC " + ("-" if f["ttc"] is None else f"{f['ttc']:.1f} s"))
+        # 전기차: RPM·기어 대신 전력(kW, 회생은 음수)과 배터리 SOC
+        pk = f.get("p_motor_kw", 0.0)
+        lines.append(f"전력 {pk:+.0f} kW" + (" 회생" if pk < -0.3 else "") + f" · 배터리 {f.get('soc', 0.8) * 100:.0f}%")
         if f["slipping"]:
             lines.append("미끄러짐!")
-        for k, ln in enumerate(lines[:4]):
-            d.text((330, y0 + 6 + k * 15), ln, font=font(12), fill=(255, 120, 90) if "미끄러짐" in ln else (225, 225, 225))
+        for k, ln in enumerate(lines[:5]):
+            col = (255, 120, 90) if "미끄러짐" in ln else ((120, 235, 160) if "회생" in ln else (225, 225, 225))
+            d.text((330, y0 + 4 + k * 13), ln, font=font(11), fill=col)
 
     def _banner(self, img, f):
         d = ImageDraw.Draw(img)
@@ -701,6 +708,8 @@ class DriverView:
         if self.night:  # 전조등 빛이 닿는 곳 살짝 밝게
             pass
         self._draw_hood(d, 1.0 if not self.night else 0.25)
+        if self.hud == "minimal":
+            return img
         self._dashboard(img, f)
         self._banner(img, f)
         self._minimap(img, f)

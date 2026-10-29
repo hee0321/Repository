@@ -1,4 +1,8 @@
-"""시점 조합(한 화면 / 나란히 / 2×2) + MP4·GIF 저장."""
+"""시점 조합 + MP4·GIF 저장.
+
+- view="main"(기본): 운전석 중심 미니멀 화면(hud.py). main=큰 화면, show=필요할 때만 보이는 작은 카드(모터룸·위성)
+- 그 밖의 view: 예전처럼 한 화면 / 나란히 / 2×2 격자("all" = --layout grid)
+"""
 from __future__ import annotations
 
 import os
@@ -6,7 +10,8 @@ import os
 from PIL import Image
 
 from .driver import DriverView
-from .engine import EngineView
+from .hud import DriverMainUI
+from .motor import MotorBayView
 from .satellite_panel import SatelliteView
 from .state import interpolate
 from .topdown import TopDownView
@@ -15,11 +20,13 @@ from .topdown import TopDownView
 VIEWS = {
     "driver": [["driver"]],
     "top": [["top"]],
-    "engine": [["engine"]],
+    "engine": [["motor"]],   # 옛 이름(엔진룸) → 전기차 모터룸
+    "motor": [["motor"]],
     "satellite": [["satellite"]],
     "both": [["driver", "top"]],
-    "all": [["driver", "top"], ["engine", "satellite"]],
+    "all": [["driver", "top"], ["motor", "satellite"]],
 }
+MAIN_W, MAIN_H = 1280, 720
 PW, PH = 640, 360
 
 
@@ -30,8 +37,8 @@ def make_panels(env, names, kinds):
             out[n] = DriverView(env, PW, PH, kinds=kinds)
         elif n == "top":
             out[n] = TopDownView(env, PW, PH, kinds=kinds)
-        elif n == "engine":
-            out[n] = EngineView(env, PW, PH)
+        elif n in ("motor", "engine"):
+            out[n] = MotorBayView(env, PW, PH)
         elif n == "satellite":
             out[n] = SatelliteView(env, PW, PH, kinds=kinds)
     return out
@@ -60,20 +67,37 @@ def _save_gif(frames, path, fps, max_mb):
     return path
 
 
+class GridUI:
+    """옛 격자 배치를 DriverMainUI와 같은 render(f) 모양으로."""
+
+    def __init__(self, env, kinds, view):
+        self.layout = VIEWS[view]
+        self.panels = make_panels(env, [n for r in self.layout for n in r], kinds)
+        self.size = (max(len(r) for r in self.layout) * PW, len(self.layout) * PH)
+
+    def render(self, f):
+        return compose(self.panels, self.layout, f)
+
+
+def make_ui(env, kinds, view="main", main="driver", show=()):
+    if view == "main":
+        return DriverMainUI(env, kinds, main=main, show=show, W=MAIN_W, H=MAIN_H)
+    return GridUI(env, kinds, view)
+
+
 def render_views(env, rows, kinds, view, out_base, fps=25.0, t0=None, t1=None, mp4=True, gif=True,
-                 gif_fps=12.5, gif_width=None, gif_max_mb=8.0, still_at=None, progress=True):
+                 gif_fps=12.5, gif_width=None, gif_max_mb=8.0, still_at=None, progress=True,
+                 main="driver", show=(), slide_in_s=0.8):
     """rows: StateRecorder.rows → fps로 보간 → 시점 배치대로 그려서 out_base + '.mp4' / '.gif' 저장.
+    view="main"이면 운전석 중심 화면(main/show), 아니면 VIEWS 격자. show 카드는 처음 slide_in_s초 동안 밀려 들어옴.
     still_at: 이 시각(초) 프레임을 out_base + '_still.png'로도 저장. 반환: 저장한 파일 목록."""
-    layout = VIEWS[view]
-    names = [n for r in layout for n in r]
-    panels = make_panels(env, names, kinds)
+    ui = make_ui(env, kinds, view, main, show)
     frames = interpolate(rows, fps, t0, t1)
     outs = []
     writer = None
     if mp4:
         import imageio_ffmpeg
-        cols, nrows = max(len(r) for r in layout), len(layout)
-        size = (cols * PW, nrows * PH)
+        size = (MAIN_W, MAIN_H) if view == "main" else ui.size
         p_mp4 = out_base + ".mp4"
         writer = imageio_ffmpeg.write_frames(p_mp4, size, fps=fps, codec="libx264", pix_fmt_out="yuv420p",
                                              output_params=["-crf", "23", "-preset", "medium"], macro_block_size=1)
@@ -81,10 +105,13 @@ def render_views(env, rows, kinds, view, out_base, fps=25.0, t0=None, t1=None, m
     gif_frames = []
     gif_every = max(1, int(round(fps / gif_fps)))
     if gif_width is None:
-        gif_width = 640 if len(layout[0]) == 1 else 800
+        gif_width = 800 if view == "main" or len(ui.layout[0]) > 1 else 640
     still = None
     for k, f in enumerate(frames):
-        img = compose(panels, layout, f)
+        if view == "main" and frames:
+            p = 1.0 if slide_in_s <= 0 else min(1.0, (f["t"] - frames[0]["t"]) / slide_in_s)
+            ui.slide = {n: p for n in ui.show}
+        img = ui.render(f)
         if writer is not None:
             writer.send(img.tobytes())
         if gif and k % gif_every == 0:

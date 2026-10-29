@@ -5,11 +5,16 @@
     python autopilot.py --scenario track --model best            # 합성 서킷
     python autopilot.py --scenario rural_night --model best      # 시골길 밤
     python autopilot.py --scenario gangnam_traffic --model none  # 모델 없이 기준 제어기
-    python autopilot.py --scenario rural_night --view driver     # 운전석 1인칭 시점 영상(MP4+GIF)
+    python autopilot.py --scenario rural --rural-cars              # (기본) 운전석 중심 화면 + 미니멀 HUD + 미니맵
+    python autopilot.py --scenario rural --show motor,satellite    # 모터룸·위성 작은 카드도 보이기
+    python autopilot.py --scenario rural --main top                # 큰 화면을 지도로 (driver|top|motor|satellite)
+    python autopilot.py --scenario rural --layout grid             # 예전 2×2: 운전석·지도·모터룸·위성
+    python autopilot.py --scenario rural_night --view driver     # 운전석 1인칭 한 장(옛 계기판 포함)
     python autopilot.py --scenario rural --view both              # 운전석 + 위에서 본 지도 나란히
-    python autopilot.py --scenario rural_night --view all         # 2×2: 운전석·지도·엔진룸·위성
-출력: media/autopilot_<시나리오>.gif / .mp4 / .html(재생기), results/autopilot_<시나리오>_events.jsonl
-      --view driver|engine|satellite|both|all 이면 media/autopilot_<시나리오>_<view>.mp4 / .gif
+    python autopilot.py --scenario rural --interactive            # 창 띄워 실시간(키: m 큰 화면, 1 모터룸, 2 위성, g 격자, q 끝)
+    python autopilot.py --scenario gangnam --view top             # 예전 지도+판단 근거 화면(GIF/HTML 재생기)
+출력: 기본(main)은 media/autopilot_<시나리오>_main.mp4 / .gif, --layout grid면 _all.mp4 / .gif
+      --view top 이면 media/autopilot_<시나리오>.gif / .mp4 / .html(재생기), results/autopilot_<시나리오>_events.jsonl
 """
 from __future__ import annotations
 
@@ -209,6 +214,83 @@ def signal_state(env):
     return nx[1].state(env.t), nx[0]
 
 
+def parse_show(text):
+    """'motor,satellite' → ['motor', 'satellite'] ('engine'은 motor로)."""
+    out = []
+    for n in (text or "").replace(" ", "").split(","):
+        n = {"engine": "motor", "sat": "satellite"}.get(n, n)
+        if n in ("motor", "satellite") and n not in out:
+            out.append(n)
+    return out
+
+
+def resolve_view(args):
+    """--layout grid면 2×2(all). 아니면 --view 그대로(기본 main = 운전석 중심 화면)."""
+    view = getattr(args, "view", "main") or "main"
+    if getattr(args, "layout", "main") == "grid" and view == "main":
+        return "all"
+    return view
+
+
+class LiveViewer:
+    """--interactive: matplotlib 창에 실시간으로 그린다. 키는 autodrive/views/ui.py 참고."""
+
+    def __init__(self, env, args):
+        import matplotlib.pyplot as plt
+        from autodrive.views import StateRecorder, UIState, make_ui
+        self.plt = plt
+        self.env = env
+        self.rec = StateRecorder(env)
+        main = getattr(args, "main", "driver")
+        self.state = UIState(main=main, show=parse_show(getattr(args, "show", "")),
+                             layout="grid" if getattr(args, "layout", "main") == "grid" else "main")
+        self.make_ui = make_ui
+        self.ui_main = None
+        self.ui_grid = None
+        self.fig, self.ax = plt.subplots(figsize=(12.8, 7.2))
+        self.fig.subplots_adjust(0, 0, 1, 1)
+        self.ax.axis("off")
+        self.im = None
+        self.fig.canvas.mpl_connect("key_press_event", lambda e: self.state.handle_key("tab" if e.key == "tab" else e.key))
+        self.every = max(1, int(round(0.04 / env.dt)))
+        self.k = 0
+        print("키: m/Tab 큰 화면 바꾸기 · 1 모터룸 · 2 위성 · g 격자↔운전석 중심 · space 멈춤 · q 끝", flush=True)
+
+    def frame(self):
+        from autodrive.views import interpolate
+        rows = self.rec.rows[-1:]
+        f = interpolate(rows, 25)[0]
+        if self.state.layout == "grid":
+            if self.ui_grid is None:
+                self.ui_grid = self.make_ui(self.env, self.rec.kinds, "all")
+            return self.ui_grid.render(f)
+        if self.ui_main is None:
+            self.ui_main = self.make_ui(self.env, self.rec.kinds, "main", self.state.main, self.state.show)
+        self.state.apply(self.ui_main)
+        return self.ui_main.render(f)
+
+    def update(self, env, a, why):
+        self.rec.rows = self.rec.rows[-2:]
+        self.rec.record(env, a, why)
+        self.k += 1
+        if self.k % self.every:
+            return
+        while True:
+            self.state.tick(self.every * env.dt)
+            img = np.asarray(self.frame())
+            if self.im is None or self.im.get_array().shape != img.shape:
+                self.ax.clear()
+                self.ax.axis("off")
+                self.im = self.ax.imshow(img)
+            else:
+                self.im.set_data(img)
+            self.plt.pause(0.001)
+            if not self.state.paused or self.state.quit or not self.plt.fignum_exists(self.fig.number):
+                break
+        if not self.plt.fignum_exists(self.fig.number):
+            self.state.quit = True
+
+
 def run(args):
     name = ALIASES.get(args.scenario, args.scenario)
     spec = ALL_BENCH[name]
@@ -232,8 +314,11 @@ def run(args):
     ap = Autopilot(env, model, cfg, stats, alert_cmd=args.alert_cmd, quiet=args.quiet)
     obs, info = env.reset(seed=args.seed)
     frames, done, steps_auto, steps = [], False, 0, 0
-    view = getattr(args, "view", "top")
+    view = resolve_view(args)
     rec = None
+    live = None
+    if getattr(args, "interactive", False):
+        live = LiveViewer(env, args)
     if view != "top":
         from autodrive.views import StateRecorder
         rec = StateRecorder(env)
@@ -246,6 +331,10 @@ def run(args):
         st, sd = signal_state(env)
         if rec is not None:
             rec.record(env, a, {**why, "n_events": len(ap.events)})
+        if live is not None:
+            live.update(env, a, {**why, "n_events": len(ap.events)})
+            if live.state.quit:
+                break
         if steps % args.every == 0 or term or trunc:
             frames.append({
                 "t": round(env.t, 2), "x": round(env.car.x, 2), "y": round(env.car.y, 2), "yaw": round(env.car.yaw, 3),
@@ -283,8 +372,10 @@ def run(args):
         from autodrive.views import pick_window, render_views
         t0, t1 = pick_window(rec.rows, args.clip_seconds, args.clip_start)
         print(f"  영상 구간 {t0:.1f}~{t1:.1f}s, {args.fps:g} fps, 보기 '{view}'")
+        main, show = getattr(args, "main", "driver"), parse_show(getattr(args, "show", ""))
         outs = render_views(env, rec.rows, rec.kinds, view, os.path.join(args.out, f"autopilot_{name}_{view}"),
-                            fps=args.fps, t0=t0, t1=t1, gif=not args.no_gif, still_at=args.still_at)
+                            fps=args.fps, t0=t0, t1=t1, gif=not args.no_gif, still_at=args.still_at,
+                            main=main, show=show)
     else:
         from autodrive.viz import render_autopilot
         outs = render_autopilot(env, frames, name, args.out, gif=not args.no_gif, mp4=args.mp4, html=not args.no_html)
@@ -307,9 +398,16 @@ if __name__ == "__main__":
     ap.add_argument("--realtime", action="store_true", help="실제 시간 속도로 돌기(스텝마다 dt 기다림)")
     ap.add_argument("--alert-cmd", default=None, help="개입 요청 때 실행할 명령 (예: 'notify-send 개입')")
     ap.add_argument("--quiet", action="store_true")
-    ap.add_argument("--view", default="top", choices=["top", "driver", "engine", "satellite", "both", "all"],
-                    help="top=기존 지도+판단 근거 화면, driver=운전석 1인칭, engine=엔진룸(단순 모델 시각화), "
-                         "satellite=위성(모듈 없으면 지도), both=운전석+지도, all=2×2")
+    ap.add_argument("--view", default="main", choices=["main", "top", "driver", "engine", "motor", "satellite", "both", "all"],
+                    help="main=(기본) 운전석 중심 화면, top=기존 지도+판단 근거 화면, driver=운전석 1인칭, "
+                         "motor(=engine)=전기차 모터룸(단순 모델 시각화), satellite=위성(모듈 없으면 지도), both=운전석+지도, all=2×2")
+    ap.add_argument("--layout", default="main", choices=["main", "grid"],
+                    help="main=(기본) 큰 운전석 + HUD + 미니맵, grid=예전 2×2 격자(운전석·지도·모터룸·위성)")
+    ap.add_argument("--main", default="driver", choices=["driver", "top", "motor", "satellite"],
+                    help="운전석 중심 화면에서 크게 볼 패널")
+    ap.add_argument("--show", default="", help="필요할 때만 보일 작은 카드: motor,satellite (기본: 숨김)")
+    ap.add_argument("--interactive", action="store_true",
+                    help="matplotlib 창에 실시간 표시(키: m/Tab 큰 화면, 1 모터룸, 2 위성, g 격자, space 멈춤, q 끝)")
     ap.add_argument("--clip-seconds", type=float, default=18.0, help="영상 길이(초). 0이면 전체")
     ap.add_argument("--clip-start", type=float, default=None, help="영상 시작(초). 없으면 볼거리 많은 구간 자동 선택")
     ap.add_argument("--fps", type=float, default=25.0, help="영상 fps (시뮬레이션 20 Hz를 보간)")
