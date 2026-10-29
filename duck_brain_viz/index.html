@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>덕의 신경망 · 걷는 동안의 뉴런 활동</title>
+<meta name="description" content="Microduck 걷기 정책(인공신경망)의 뉴런 활동을 뇌 모양 3D로 보여 주는 시각화" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=Noto+Sans+KR:wght@400;500;700&display=swap" rel="stylesheet" />
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'><text y='52' font-size='52'>🦆</text></svg>" />
+</head>
+<body>
+<div id="app">
+  <div id="stage"><canvas id="brain"></canvas><div id="labels"></div><div id="tip" hidden></div></div>
+  <header class="hud head">
+    <h1>덕의 신경망 <span>걷는 동안의 뉴런 활동</span></h1>
+    <p class="note">실제 뇌가 아니에요. Microduck을 걷게 하는 <b>인공신경망</b>(입력 61 → 512 → 256 → 128 → 출력 14)의 뉴런을 뇌 모양으로 배치해서, 시뮬레이션에서 걷는 동안 실제로 계산된 값으로 밝기를 바꿔 보여 줘요.</p>
+  </header>
+  <aside class="hud side">
+    <div class="video-wrap"><video id="vid" src="data/walk.mp4" muted playsinline preload="auto"></video><span class="tag">MuJoCo 시뮬레이션</span></div>
+    <div class="cmd"><div class="k">지금 명령</div><div id="cmd" class="v">-</div><div id="meas" class="m">-</div></div>
+    <div class="sec">
+      <div class="k">층별 활동 <small>(뇌 부위 = 신경망 층)</small></div>
+      <ul id="layers"></ul>
+    </div>
+    <div class="sec">
+      <div class="k">출력 뉴런 → 관절 목표 <small>(뇌간)</small></div>
+      <ul id="joints"></ul>
+    </div>
+  </aside>
+  <footer class="hud bar">
+    <button id="play" aria-label="재생/일시정지">❚❚</button>
+    <div class="tl">
+      <input id="scrub" type="range" min="0" max="449" value="0" step="1" aria-label="타임라인" />
+      <div id="segs"></div>
+    </div>
+    <span id="time" class="time">0.0s</span>
+    <button id="speed" aria-label="재생 속도">1×</button>
+  </footer>
+  <div id="loading">신경망 기록 불러오는 중…</div>
+</div>
+<script type="module" src="/src/main.ts"></script>
+</body>
+</html>

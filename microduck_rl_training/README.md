@@ -19,6 +19,7 @@ Microduck이 시뮬레이션에서 경험을 쌓으며 배우는 강화학습(PP
 - `NOTES.md`: 시험 세부 내용
 - `KAGGLE_RUN.md`, `kaggle/`: Kaggle 실행 기록, 커널 설정, 시험 실행 로그
 - `kaggle/full_run_v4/`: 10.5시간 본 학습 요약 로그, 지표, ONNX, 걷기 영상
+- 신경망 활동 3D 시각화: `../duck_brain_viz/` (https://hee0321.github.io/Repository/)
 
 ## Kaggle에서 돌리는 법
 1. Kaggle에 `microduck_kaggle.ipynb`를 업로드해요. CLI를 쓰면 `kaggle kernels push -p <폴더> --accelerator NvidiaTeslaT4`로 올려요. 이때 `kaggle/kernel-metadata.json`을 참고하세요.
