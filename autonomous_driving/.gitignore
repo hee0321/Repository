@@ -1,0 +1,12 @@
+# 학습 결과/가중치는 저장소에 올리지 않음
+weights/
+runs/
+logs/
+*.pt
+*.pth
+*.zip
+*.onnx
+*.ckpt
+__pycache__/
+.env
+sumo_kr/build/

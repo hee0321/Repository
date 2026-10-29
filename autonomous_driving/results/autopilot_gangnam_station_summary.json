@@ -1,0 +1,31 @@
+{
+ "scenario": "gangnam_station",
+ "model": "weights/best.zip",
+ "engage": "완주율 0.95 미만: obstacles_track, gangnam_reverse, rural_day_narrow, rural_night_gravel, rural_curvy; 이탈·충돌 5건; 위반 4건; 어린이보호구역 과속 4.0s",
+ "completion": 1.0,
+ "crashed": false,
+ "time_s": 139.0,
+ "autonomous_share": 0.739,
+ "takeovers": 12,
+ "safe_stops": 0,
+ "violations": {
+  "speeding_s": 0.0,
+  "speeding_events": 0,
+  "school_speeding_s": 0.0,
+  "max_over_kmh": 0.0,
+  "red_runs": 0,
+  "centerline_s": 0.0,
+  "centerline_events": 0,
+  "signal_stops": 0,
+  "right_turn_no_stop": 0,
+  "right_turn_ok": 0,
+  "collisions": 0,
+  "edge_close_s": 1.0,
+  "sight_overspeed_s": 0.0,
+  "unsafe_overtake": 0,
+  "unsafe_meet": 0,
+  "yield_ok": 0,
+  "ped_unsafe": 0,
+  "slip_s": 0.0
+ }
+}
