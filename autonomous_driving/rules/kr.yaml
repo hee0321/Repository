@@ -36,4 +36,5 @@ rural:                         # 시골길(도시 밖 일반도로·농로·마�
   meet_speed_kmh: 15           # 좁은 길에서 마주 오는 차와 엇갈릴 때 최대 속도
   ped_pass_clearance_m: 1.0    # 보행자 옆을 지날 때 띄울 거리
   ped_pass_speed_kmh: 20
+  gravel_speed_kmh: 22         # 비포장·자갈 구간 권장 서행 속도(기준 운전자)
   overtake_min_sight_m: 100    # 앞지르기는 이만큼 앞이 보이고 마주 오는 차가 없을 때만

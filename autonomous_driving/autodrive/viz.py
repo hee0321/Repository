@@ -9,7 +9,7 @@ import numpy as np
 MODE_COLOR = {"AUTONOMOUS": "#2a9d8f", "TAKEOVER": "#e76f51", "SAFE_STOP": "#d62828", "BASELINE": "#457b9d"}
 MODE_KO = {"AUTONOMOUS": "자율 주행(모델)", "TAKEOVER": "개입 요청 → 기준 제어기", "SAFE_STOP": "안전 정지",
            "BASELINE": "기준 제어기"}
-KIND_COLOR = {"car": "#6c757d", "tractor": "#bc6c25", "oncoming": "#9d0208", "ped": "#7209b7", "object": "#343a40"}
+KIND_COLOR = {"car": "#6c757d", "entering": "#bc6c25", "oncoming": "#9d0208", "ped": "#7209b7", "object": "#343a40"}
 LIGHT_KO = {"green": "초록", "yellow": "노랑", "red": "빨강", "-": "없음"}
 
 
@@ -139,7 +139,7 @@ canvas{background:#a7c957;border-radius:8px}#panel{white-space:pre-line;font-siz
 const D=__DATA__;const F=D.frames,R=D.road;const cv=document.getElementById('cv'),c=cv.getContext('2d');
 const sl=document.getElementById('sl');sl.max=F.length-1;let i=0,playing=false;
 const MC={AUTONOMOUS:'#2a9d8f',TAKEOVER:'#e76f51',SAFE_STOP:'#d62828',BASELINE:'#457b9d'};
-const KC={car:'#6c757d',tractor:'#bc6c25',oncoming:'#9d0208',ped:'#7209b7',object:'#343a40'};
+const KC={car:'#6c757d',entering:'#bc6c25',oncoming:'#9d0208',ped:'#7209b7',object:'#343a40'};
 function draw(){const f=F[i],S=6,W=cv.width;cv.style.background=R.night?'#1d3557':'#a7c957';
 c.clearRect(0,0,W,W);const tx=x=>W/2+(x-f.x)*S,ty=y=>W/2-(y-f.y)*S;
 c.fillStyle=R.rural?'#b7b7a4':'#6c757d';c.beginPath();R.left.forEach((p,k)=>k?c.lineTo(tx(p[0]),ty(p[1])):c.moveTo(tx(p[0]),ty(p[1])));

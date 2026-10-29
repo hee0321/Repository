@@ -31,7 +31,10 @@ def _smooth(P, win=9, iters=3):
 def build_route(name: str, scenario: dict, signal_seed: int = 0):
     """시나리오(웨이포인트) → (Track, TrafficRules, meta). 데이터는 캐시에서 읽는다(없으면 받는다)."""
     import networkx as nx
-    data = osm.fetch(scenario.get("data", name), *scenario["center"], scenario["radius"])
+    if scenario.get("bbox"):   # 시골길: OSM 공식 API 작은 영역 캐시
+        data = osm.fetch_osm_api(scenario.get("data", name), tuple(scenario["bbox"]))
+    else:
+        data = osm.fetch(scenario.get("data", name), *scenario["center"], scenario["radius"])
     G = osm.build_graph(data)
     lat0, lon0 = data["center"]
     # 웨이포인트마다 가까운 노드 후보 여러 개(40 m 안) 중에서 전체 경로가 가장 짧은 조합을 고른다.
@@ -100,7 +103,18 @@ def build_route(name: str, scenario: dict, signal_seed: int = 0):
         dh = np.angle(np.exp(1j * (track.heading_at(x + 30) - track.heading_at(x - 30))))
         sigs.append(Signal(s=float(max(x - before, 1.0)), offset=float(rng.uniform(0, 48)), name=f"signal{k}",
                            right_turn=bool(dh < -cfg["right_turn_stop"]["detect_turn_rad"])))
-    rules = TrafficRules(1.0, limit, school, twoway, lane_ref, sigs, closed=False, length=track.length)
+    if scenario.get("rural"):
+        # 시골길은 노드 간격이 길어서(간선 중점 기준이면 놓침) 1 m 표본마다 학교·유치원까지 거리로 보호구역을 다시 칠함
+        from .krrules import load as _load
+        zr = float(_load()["school_zone"]["radius_m"])
+        ch = [osm.to_local(c["lat"], c["lon"], lat0, lon0) for c in data["schools"] if osm.is_child_facility(c)]
+        if ch:
+            C = np.array(ch, float).reshape(-1, 2)
+            school = school | (np.min(np.linalg.norm(P[:, None, :] - C[None], axis=2), axis=1) < zr)
+        track, rules, rmeta = _rural_rules(P, s, edges, ei, school, sigs, scenario, signal_seed)
+    else:
+        rules = TrafficRules(1.0, limit, school, twoway, lane_ref, sigs, closed=False, length=track.length)
+        rmeta = {}
     # 메타: 지도 링크, 지나는 길 이름
     names = []
     for e in edges:
@@ -111,10 +125,60 @@ def build_route(name: str, scenario: dict, signal_seed: int = 0):
     meta = {
         "title": scenario["title"], "center": (lat0, lon0), "streets": names,
         "length_m": round(track.length, 1), "right_turn_signals": sum(sg.right_turn for sg in sigs), "n_signals": len(sigs),
-        "school_zone_m": int(school.sum()), "limits_kmh": sorted(set(int(round(x / KMH)) for x in limit)),
+        "school_zone_m": int(np.asarray(rules.school).sum()), "limits_kmh": sorted(set(int(round(x / KMH)) for x in rules.limit_mps)),
         "kakao": osm.kakao_link(scenario["title"].split(":")[0], float(mid_lat), float(mid_lon)),
         "naver": osm.naver_link(scenario["title"], float(mid_lat), float(mid_lon)),
         "signals_latlon": sig_ll, "graph": G, "data": data,
         "school_sources": sorted(set(e["school_source"] for e in edges if e["school_zone"])),
+        "attribution": data.get("attribution"), **rmeta,
     }
     return track, rules, meta
+
+
+GRAVEL = ("unpaved", "gravel", "fine_gravel", "dirt", "compacted", "ground", "earth", "mud", "sand")
+
+
+def _rural_rules(P, s, edges, ei, school, sigs, scenario, seed):
+    """실제 OSM 시골길 → 시골길 규칙(rules/kr.yaml rural):
+    - 제한속도: OSM maxspeed 우선, 없으면 중앙선 있는 2차로(secondary·tertiary, lanes≥2) 60, 좁은 길
+      (residential·unclassified·track·lanes=1) 40, 어린이보호구역(초등학교·유치원 300 m) 30
+    - 노면: surface 가 비포장 계열이거나 track(포장 정보 없음)이면 자갈/비포장(마찰 0.45~0.6)
+    - 폭: 경로 길이의 절반 이상이 좁은 길이면 1차로 폭(4.6~5.0 m, 중앙선 없음), 아니면 2차로(중앙선, 앞지르기 허용 구간 계산)
+    - 밤/차량 흐름: 시나리오의 night, traffic 시드로 rural_traffic() (농기계 없음, 일반 차량 흐름)
+    - 언덕 꼭대기: OSM 에 고도가 없어 넣지 않음(굽이 시야는 곡률로 계산)"""
+    from .krrules import load
+    from .rural import passing_zones, rural_traffic
+    cfg = load()["rural"]
+    rng = np.random.default_rng(seed + 7)
+    m = len(s)
+    narrow_e = []
+    for e in edges:
+        hw = e["highway"].replace("_link", "")
+        lanes = str(e.get("lanes") or "")
+        narrow_e.append(hw in ("residential", "unclassified", "track", "living_street") or lanes == "1")
+    narrow_s = np.array([narrow_e[i] for i in ei], bool)
+    narrow = bool(narrow_s.mean() >= 0.5)
+    lim = np.empty(m)
+    for j, i in enumerate(ei):
+        e = edges[i]
+        try:
+            v = float(str(e.get("maxspeed_tag") or "").split()[0])
+        except (ValueError, IndexError):
+            v = cfg["narrow_limit_kmh"] if narrow_e[i] else cfg["general_limit_kmh"]
+        lim[j] = v
+    lim = np.where(school, np.minimum(lim, cfg["village_school_limit_kmh"]), lim) * KMH
+    surf = np.array([(str(edges[i].get("surface") or "") in GRAVEL) or (edges[i]["highway"] == "track" and not edges[i].get("surface"))
+                     for i in ei], bool)
+    mu = np.where(surf, rng.uniform(0.45, 0.6), 0.9)
+    width = float(rng.uniform(4.6, 5.0)) if narrow else 2 * LANE_W
+    track = Track(P, width=width, closed=False, name=scenario.get("title", "rural"))
+    lane_ref = -min(0.5, width / 2 - 0.9 - 0.6) if narrow else -LANE_W / 2
+    night = bool(scenario.get("night", False))
+    rules = TrafficRules(1.0, lim, school, np.full(m, not narrow), np.full(m, lane_ref), sigs, closed=False,
+                         length=track.length, mu=mu, gravel=surf, light=0.15 if night else 1.0,
+                         roadside_clear_m=float(scenario.get("roadside_clear_m", 3.0)), crests=[], rural=True)
+    rules.passing_ok = passing_zones(track, school, [], narrow)
+    traffic = rural_traffic(np.random.default_rng(scenario.get("traffic_seed", seed)), track, width, narrow, lane_ref,
+                            scenario.get("difficulty", 1.0)) if scenario.get("traffic", True) else []
+    return track, rules, {"rural_narrow": narrow, "gravel_m": int(surf.sum()), "traffic": traffic, "night": night,
+                          "passing_ok_m": int(rules.passing_ok.sum())}
