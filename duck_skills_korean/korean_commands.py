@@ -33,8 +33,8 @@ RULES: list[tuple[str, callable]] = [
     (r"(왼|오른)\S*\s*(발로)?.*(공.*)?(차|킥)", lambda t: Behavior("kick", ("오른" if "오른" in t else "왼") + "발로 공 차기 (Pollen ball_kick_"
                                                                 + ("right" if "오른" in t else "left") + ".onnx)", {"foot": "right" if "오른" in t else "left"})),
     (r"공\s*차|킥", lambda t: Behavior("kick", "왼발로 공 차기 (Pollen ball_kick_left.onnx)", {"foot": "left"})),
-    (r"부리로|물어\s*와|물어", lambda t: Behavior("beak_pick", "부리로 물어 오기 (ground_pick + 부리 관절, 돌아서 가져옴)" if re.search(r"물어\s*와|가져와", t)
-                                                       else "부리로 물건 물기 (ground_pick + 부리 관절)", {"fetch": bool(re.search(r"물어\s*와|가져와", t))})),
+    (r"부리로|입으로|물어\s*와|물어", lambda t: Behavior("beak_pick", "입으로 물어 오기 (ground_pick + 턱판 관절, 돌아서 가져옴)" if re.search(r"물어\s*와|가져와", t)
+                                                       else "입으로 물건 물기 (ground_pick + 턱판 관절)", {"fetch": bool(re.search(r"물어\s*와|가져와", t))})),
     (r"주워|집어|줍", lambda t: Behavior("ground_pick", "바닥 물건 집기 자세 (Pollen alpha_ground_pick.onnx)")),
     (r"앉아|앉자|앉을래", lambda t: Behavior("sitstand", "앉기 (Pollen alpha_sitstand.onnx)", {"sit": True})),
     (r"일어서", lambda t: Behavior("sitstand", "앉았다 일어서기 (Pollen alpha_sitstand.onnx)", {"sit": False})),

@@ -76,10 +76,10 @@ SKILLS_SCRIPT = [
     (29.5, "왼발로 공 차", "kick_left"),
     (34.0, "오른발로 공 차", "kick_right"),
     (38.5, "선생님처럼 일어나", "alpha_stand"),
-    (44.5, "부리로 물어", "beak_pick"),
+    (44.5, "입으로 물어", "beak_pick"),
 ]
 SKILLS_END = 52.0
-# 부리 가까이 보기 (--preset beak)
+# 새 머리 턱판으로 물어오기 가까이 보기 (--preset beak)
 BEAK_SCRIPT = [
     (0.0, "덕아, 물어와", "beak"),
     (13.5, "멈춰", "beak"),
@@ -144,7 +144,7 @@ def main():
         if a.out.endswith("demo_korean_commands.mp4"):
             a.out = a.out.replace("demo_korean_commands.mp4", "demo_ack_head_raise.mp4")
     for name, sc, en, fn, clips_ in (("skills", SKILLS_SCRIPT, SKILLS_END, "demo_pollen_skills.mp4", True),
-                                     ("beak", BEAK_SCRIPT, BEAK_END, "demo_beak_fetch_closeup.mp4", False)):
+                                     ("beak", BEAK_SCRIPT, BEAK_END, "demo_new_head_fetch.mp4", False)):
         if a.preset == name:
             script = sc
             a.no_clips = not clips_
@@ -153,7 +153,7 @@ def main():
             if a.out.endswith("demo_korean_commands.mp4"):
                 a.out = a.out.replace("demo_korean_commands.mp4", fn)
     TAG = {"skills": "MuJoCo · v8 + Pollen 공개 정책 바꿔 끼우기 (추가 학습 없음)",
-           "beak": "부리 관절(모델 사본) · 물건은 붙이기 보조"}.get(a.preset)
+           "beak": "새 머리 · 턱판 관절(사본) · 붙이기 보조"}.get(a.preset)
     if a.script:
         script = []
         for ln in open(a.script, encoding="utf-8"):
@@ -201,7 +201,7 @@ def main():
             if clip == "obstacle":   # 덕 뒤 위에서 코스가 보이게 (처음 한 번만)
                 if idx == 0:
                     cam.distance, cam.elevation, cam.azimuth = 1.45, -35.0, yaw_deg + 35
-            elif clip == "beak":     # 부리 가까이: 옆앞에서
+            elif clip == "beak":     # 머리 가까이: 옆앞에서
                 cam.distance, cam.elevation, cam.azimuth = 0.6, -12.0, yaw_deg + 180 - 65
             elif clip == "roulade":
                 cam.distance, cam.elevation, cam.azimuth = 0.95, -18.0, yaw_deg + 90
@@ -268,7 +268,7 @@ def main():
             if sim.obstacles:
                 status += f" · 장애물까지 최소 {cl:.2f} m"
             if getattr(sim, "carry", None) is not None:
-                status += " · 부리에 물건 있음"
+                status += " · 물건 물고 있음"
             writer.append_data(overlay(sim.render(), said, label, status, extra, tag=TAG))
         if k % 250 == 0:
             print(f"[{time.time()-t_wall:5.0f}s] t={t:5.1f} {said} gz={gz:+.2f} vx={v[0]:+.2f} wz={w[2]:+.2f}", flush=True)

@@ -33,14 +33,15 @@ OBSTACLES = [
 OBST_COLORS = [(0.25, 0.55, 0.95, 1), (0.35, 0.75, 0.40, 1), (0.85, 0.35, 0.55, 1), (0.95, 0.75, 0.20, 1)]
 
 
-PICK_HALF = 0.010   # 집을 물건: 2 cm 정육면체 (보기용 운동학적 물체, 질량 없음)
+PICK_HALF = 0.016   # 집을 물건: 지름 3.2 cm 말랑 공 (영상의 양말처럼 덮개와 턱판 사이에 끼움; 보기용 운동학적 물체, 질량 없음)
+PICK_HALF_Z = PICK_HALF
 
 
 def _pickup_spec():
     s = mujoco.MjSpec()
     b = s.worldbody.add_body(name="root", mocap=True)
-    g = b.add_geom(name="geom", type=mujoco.mjtGeom.mjGEOM_BOX, size=[PICK_HALF] * 3,
-                   rgba=[0.15, 0.45, 0.95, 1], group=0, contype=0, conaffinity=0)
+    g = b.add_geom(name="geom", type=mujoco.mjtGeom.mjGEOM_SPHERE, size=[PICK_HALF, 0, 0],
+                   rgba=[0.96, 0.45, 0.65, 1], group=0, contype=0, conaffinity=0)
     g.pos = [0, 0, 0]
     return s
 
@@ -64,7 +65,7 @@ class Cmd:
     head: tuple = (0.0, 0.0, 0.0, 0.0)            # neck_pitch, head_pitch, head_yaw, head_roll (rad, HOME 기준)
     body: tuple = (0.0, 0.0, 0.0, 0.0, 0.0, 0.0)  # x, y, z, roll, pitch, yaw (서 있을 때만)
     policy: str | None = None   # None = v8 velstand, 아니면 Pollen 공개 ONNX 이름 (policies.py)
-    beak: float | None = None   # 부리(아랫부리 경첩) 목표 각도 rad, None = 그대로 유지
+    beak: float | None = None   # 아래 턱판(passive_jaw 경첩) 목표 각도 rad, None = 그대로 유지
 
     @property
     def standing(self) -> bool:
@@ -100,13 +101,13 @@ class DuckSim:
                 cfg.scene.entities = {**cfg.scene.entities, name: EntityCfg(spec_fn=_obstacle_spec(kind, size, rgba))}
             cfg.sim.nconmax = max(cfg.sim.nconmax or 0, 1000); cfg.sim.njmax = max(cfg.sim.njmax or 0, 4000)
         if with_beak:
-            # 보상 항은 시연에 필요 없고, 일부가 '모든 액추에이터=14개'를 가정해서 부리(15번째)와 충돌 → 끔
+            # 보상 항은 시연에 필요 없고, 일부가 '모든 액추에이터=14개'를 가정해서 턱판(15번째)와 충돌 → 끔
             for k in list(cfg.rewards):
                 cfg.rewards.pop(k)
             for k in list(cfg.curriculum):   # 보상 가중치 커리큘럼도 같이 끔 (시연엔 영향 없음)
                 cfg.curriculum.pop(k)
-        if with_beak:   # 시연용 모델 사본에 부리(경첩+액추에이터) 추가 — 학습 XML 은 그대로
-            from beak import with_beak as _wb
+        if with_beak:   # 시연용 모델 사본에 새 머리(색 + 아래 판 경첩·액추에이터) — 학습 XML 은 그대로 (head.py)
+            from head import with_head as _wb
             rc = cfg.scene.entities["robot"]
             cfg.scene.entities = {**cfg.scene.entities, "robot": replace(rc, spec_fn=_wb(rc.spec_fn)),
                                   "pickup": EntityCfg(spec_fn=_pickup_spec)}
@@ -143,13 +144,13 @@ class DuckSim:
         self.robot_geoms = set(int(g) for g in range(self.mjm.ngeom) if int(self.mjm.geom_bodyid[g]) in rb)
         self.beak_aid = None
         self.pickup = None
-        self.carry = None       # (부리 좌표계 오프셋) — 물고 있으면 물건을 부리에 붙여 같이 움직임
+        self.carry = None       # (턱판 좌표계 오프셋) — 물고 있으면 물건을 턱판에 붙여 같이 움직임
         self.beak_target = 0.0
         if with_beak:
             self.pickup = self.env.scene["pickup"]
-            self.beak_aid = mujoco.mj_name2id(self.mjm, mujoco.mjtObj.mjOBJ_ACTUATOR, "robot/beak_motor")
-            self.beak_jid = mujoco.mj_name2id(self.mjm, mujoco.mjtObj.mjOBJ_JOINT, "robot/passive_beak")
-            self.beak_site = mujoco.mj_name2id(self.mjm, mujoco.mjtObj.mjOBJ_SITE, "robot/beak_mid")
+            self.beak_aid = mujoco.mj_name2id(self.mjm, mujoco.mjtObj.mjOBJ_ACTUATOR, "robot/jaw_motor")
+            self.beak_jid = mujoco.mj_name2id(self.mjm, mujoco.mjtObj.mjOBJ_JOINT, "robot/passive_jaw")
+            self.beak_site = mujoco.mj_name2id(self.mjm, mujoco.mjtObj.mjOBJ_SITE, "robot/jaw_mid")
             self.place_pickup(HIDE[0], HIDE[1] + 3)
         self.robot_coll_geoms = [g for g in self.robot_geoms if self.mjm.geom_contype[g] or self.mjm.geom_conaffinity[g]]
 
@@ -288,13 +289,13 @@ class DuckSim:
         dj = self.robot.data.default_joint_pos.clone()
         self.robot.write_joint_state_to_sim(dj, torch.zeros_like(dj))
 
-    # ── 부리·집을 물건 ─────────────────────────────────────────────────────
-    def place_pickup(self, x, y, z=PICK_HALF, quat=(1.0, 0.0, 0.0, 0.0)):
+    # ── 턱판·집을 물건 ─────────────────────────────────────────────────────
+    def place_pickup(self, x, y, z=PICK_HALF_Z, quat=(1.0, 0.0, 0.0, 0.0)):
         self.pickup_pos = np.array([x, y, z], dtype=float)
         self.pickup.write_mocap_pose_to_sim(torch.tensor([[float(x), float(y), float(z), *map(float, quat)]]))
 
     def beak_mid(self):
-        """(부리 가운데 위치, 아랫부리 회전행렬) — warp 데이터에서 직접."""
+        """(턱판 앞 가운데 위치, 턱판 회전행렬) — warp 데이터에서 직접."""
         d = self.env.sim.data
         return d.site_xpos[0, self.beak_site].numpy().astype(float), d.site_xmat[0, self.beak_site].numpy().reshape(3, 3).astype(float)
 
@@ -302,14 +303,19 @@ class DuckSim:
         qa = self.mjm.jnt_qposadr[self.beak_jid]
         return float(self.env.sim.data.qpos[0, qa])
 
-    GRAB_OFFSET = (0.011, 0.0, -0.012)   # 아랫부리 좌표: 부리 위(+x)·앞쪽(-z)에 물건 가운데
+    GRAB_OFFSET = (0.009, 0.0, -0.006)   # 턱판 좌표: 판 앞쪽 가운데 위(+x, 덮개 쪽)에 물건 가운데
 
     def grab(self):
-        """운동학적 '붙이기' (물리 집기 아님): 물건을 아랫부리 위 정해진 자리에 붙여 같이 움직이게 함.
+        """운동학적 '붙이기' (물리 집기 아님): 물건을 턱판 위 정해진 자리에 붙여 같이 움직이게 함.
         붙이는 순간 물건이 옮겨 가는 거리(snap)를 기록."""
         p, R = self.beak_mid()
         self.carry = np.array(self.GRAB_OFFSET)
         self.grab_snap = float(np.linalg.norm(p + R @ self.carry - self.pickup_pos))
+        if os.environ.get("DUCK_GRAB_DEBUG"):
+            bp, yaw, _ = self.pose(); tgt = p + R @ self.carry
+            c_, s_ = math.cos(yaw), math.sin(yaw); dx, dy = tgt[0] - bp[0], tgt[1] - bp[1]
+            e = tgt - self.pickup_pos
+            print("GRAB_DEBUG target-minus-object (fwd, left, z)", round(c_ * e[0] + s_ * e[1], 4), round(-s_ * e[0] + c_ * e[1], 4), round(float(e[2]), 4))
 
     def release(self):
         self.carry = None
@@ -358,6 +364,10 @@ class DuckSim:
         self.venv.step(act)
         if self.beak_aid is not None:
             self._update_carry()
+            if os.environ.get("DUCK_GRAB_DEBUG") and int(round(self.t / self.dt)) % 5 == 0:
+                p_, R_ = self.beak_mid(); bp, yaw, _ = self.pose(); tgt = p_ + R_ @ np.array(self.GRAB_OFFSET)
+                c_, s_ = math.cos(yaw), math.sin(yaw); dx, dy = tgt[0] - bp[0], tgt[1] - bp[1]
+                print(f"JAWZ t={self.t:.2f} fwd={c_*dx+s_*dy:.3f} left={-s_*dx+c_*dy:.3f} z={tgt[2]:.3f} ang={self.beak_angle():.2f}")
         self.t += self.dt
 
     # ── Pollen 공개 ONNX 정책 실행 (같은 61차원 관측·14차원 행동 약속) ──────────

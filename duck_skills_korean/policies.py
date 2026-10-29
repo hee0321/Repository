@@ -15,7 +15,7 @@ import math
 import numpy as np
 from duck_sim import Cmd
 from behaviors import Controller
-from beak import BEAK_OPEN
+from head import JAW_OPEN as BEAK_OPEN, JAW_HOLD
 
 REPO = "pollen-robotics/microduck-policies"
 FILES = {
@@ -87,7 +87,7 @@ class GroundPick(Skill):
     policy, duration = "ground_pick", 2.8
 
     def prepare(self):   # 바닥에 작은 물건(2 cm 파란 상자)을 입 아래 놓기 — 이 정책은 숙이기만 함 (집기 없음)
-        from duck_sim import PICK_HALF
+        from duck_sim import PICK_HALF_Z as PICK_HALF
         p, yaw, _ = self.sim.pose()
         if getattr(self.sim, "pickup", None) is None:
             return
@@ -203,19 +203,19 @@ class CrouchSubstitute(Controller):
 
 
 class BeakPick(Controller):
-    """'부리로 물어' / '물어와': 부리 벌리기 → ground_pick 정책으로 숙이기 → 부리 닫기 → v8 로 서기 (물고 있음)
+    """'입으로 물어' / '물어와': 아래 턱판 벌리기 → ground_pick 정책으로 숙이기 → 턱판 닫기 → v8 로 서기 (물고 있음)
     → (물어와) 제자리 돌아서 0.5 m 걸어와 멈춤.
 
-    정직하게: 부리 경첩·액추에이터는 진짜 관절이지만, 물건을 '무는' 건 물리 마찰 집기가 아님.
-    부리를 닫는 순간 물건을 부리(아랫부리) 좌표에 운동학적으로 붙임(sim.grab) — 물건은 질량 없는 보기용 물체.
+    정직하게: 턱판 경첩·액추에이터(head.py)는 진짜 관절이지만, 물건을 '무는' 건 물리 마찰 집기가 아님.
+    턱판을 닫는 순간 물건을 턱판 좌표(덮개와 판 사이)에 운동학적으로 붙임(sim.grab) — 물건은 질량 없는 보기용 물체.
     """
-    OPEN_S = 0.6          # v8 로 서서 부리 벌리기
+    OPEN_S = 0.6          # v8 로 서서 턱판 벌리기
     PICK = 2.8            # ground_pick 정책 시간 (manifest)
-    CLOSE_AT = 1.25       # ground_pick 안에서 부리 닫기 시작 (입이 가장 낮을 때 ≈ 1.3–1.5 s)
+    CLOSE_AT = 1.25       # ground_pick 안에서 턱판 닫기 시작 (입이 가장 낮을 때 ≈ 1.3–1.5 s)
     CLOSE_S = 0.25
-    HOLD = 0.42           # 물건(2 cm)을 문 채 부리 각도
-    # 물건이 놓일 자리 (덕 기준 앞 x, 왼쪽 y) — 숙였을 때 부리 가운데가 오는 곳 (시뮬에서 잼)
-    SPOT = (0.062, 0.006)
+    HOLD = JAW_HOLD       # 물건(2 cm)을 덮개와 턱판 사이에 끼운 채 각도
+    # 물건이 놓일 자리 (덕 기준 앞 x, 왼쪽 y) — 숙였을 때 턱판 가운데가 오는 곳 (시뮬에서 잼)
+    SPOT = (0.049, 0.005)
 
     def __init__(self, b, sim):
         super().__init__(b, sim)
@@ -224,7 +224,7 @@ class BeakPick(Controller):
         self.grabbed = False
         self.yaw0 = None
         p, yaw, _ = sim.pose()
-        from duck_sim import PICK_HALF
+        from duck_sim import PICK_HALF_Z as PICK_HALF
         R = np.array([[math.cos(yaw), -math.sin(yaw)], [math.sin(yaw), math.cos(yaw)]])
         xy = p[:2] + R @ np.array(self.SPOT)
         sim.release()
@@ -236,12 +236,12 @@ class BeakPick(Controller):
         if t < 0:
             return None
         if t < self.OPEN_S:
-            return "부리 벌리기"
+            return "입(아래 턱판) 벌리기"
         tp = t - self.OPEN_S
         if tp < self.CLOSE_AT:
             return f"정책 바꿈 → {FILES['ground_pick']} (숙이기)"
         if tp < self.PICK:
-            return "부리 닫기 → 물었어요"
+            return "턱판 닫기 → 덮개와 판 사이에 물었어요"
         if tp < self.PICK + 1.5:
             return "v8 로 서기 → 물고 있어요"
         if self.fetch and not self.done:
@@ -261,7 +261,7 @@ class BeakPick(Controller):
             else:
                 a = min(1.0, (tp - self.CLOSE_AT) / self.CLOSE_S)
                 bk = BEAK_OPEN + (self.HOLD - BEAK_OPEN) * a
-                if a >= 1.0 and not self.grabbed:
+                if a >= 1.0 and not self.grabbed:   # 닫힌 순간 붙임 (숙이면 머리 앞끝이 가장 낮음)
                     self.sim.grab(); self.grabbed = True
             vx, vy, _ = _phase(tp, 4.0)
             return Cmd(vx, vy, 0.0, policy="ground_pick", beak=bk)
