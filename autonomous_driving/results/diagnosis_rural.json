@@ -1,0 +1,113 @@
+{
+ "composition_old_stage3": {
+  "rural": {
+   "episodes": 0.042,
+   "steps": 0.05
+  },
+  "urban_korea": {
+   "episodes": 0.358,
+   "steps": 0.469
+  },
+  "urban_synthetic": {
+   "episodes": 0.6,
+   "steps": 0.481
+  }
+ },
+ "composition_old_stage4": {
+  "rural": {
+   "episodes": 0.508,
+   "steps": 0.428
+  },
+  "urban_korea": {
+   "episodes": 0.158,
+   "steps": 0.255
+  },
+  "urban_synthetic": {
+   "episodes": 0.333,
+   "steps": 0.317
+  }
+ },
+ "policy": {
+  "best.zip": {
+   "urban_bc_mse": 0.0263,
+   "urban_steer_mse": 0.0119,
+   "urban_accel_mse": 0.0407,
+   "rural_bc_mse": 0.0546,
+   "urban_shift_vs_first": 0.0
+  },
+  "cand_3_bc.zip": {
+   "urban_bc_mse": 0.0142,
+   "urban_steer_mse": 0.0007,
+   "urban_accel_mse": 0.0277,
+   "rural_bc_mse": 0.0229,
+   "urban_shift_vs_first": 0.0194
+  },
+  "cand_4_bc.zip": {
+   "urban_bc_mse": 0.018,
+   "urban_steer_mse": 0.0013,
+   "urban_accel_mse": 0.0346,
+   "rural_bc_mse": 0.0163,
+   "urban_shift_vs_first": 0.0154
+  },
+  "cand_5_bc.zip": {
+   "urban_bc_mse": 0.0244,
+   "urban_steer_mse": 0.0015,
+   "urban_accel_mse": 0.0472,
+   "rural_bc_mse": 0.0227,
+   "urban_shift_vs_first": 0.0149
+  },
+  "cand_5_ppo.zip": {
+   "urban_bc_mse": 0.0403,
+   "urban_steer_mse": 0.0357,
+   "urban_accel_mse": 0.0449,
+   "rural_bc_mse": 0.037,
+   "urban_shift_vs_first": 0.0173
+  }
+ },
+ "obs_shift_rural_vs_urban": {
+  "road_width": {
+   "urban_mean": 0.774,
+   "rural_mean": 0.624,
+   "gap_sd": -1.43
+  },
+  "light": {
+   "urban_mean": 1.0,
+   "rural_mean": 0.585,
+   "gap_sd": -1.37
+  },
+  "lead_gap": {
+   "urban_mean": 0.99,
+   "rural_mean": 0.66,
+   "gap_sd": -1.19
+  },
+  "limit": {
+   "urban_mean": 0.76,
+   "rural_mean": 0.544,
+   "gap_sd": -1.01
+  },
+  "lidar12": {
+   "urban_mean": 0.149,
+   "rural_mean": 0.111,
+   "gap_sd": -1.0
+  },
+  "lidar11": {
+   "urban_mean": 0.175,
+   "rural_mean": 0.129,
+   "gap_sd": -1.0
+  },
+  "lidar13": {
+   "urban_mean": 0.137,
+   "rural_mean": 0.103,
+   "gap_sd": -0.98
+  },
+  "lidar9": {
+   "urban_mean": 0.436,
+   "rural_mean": 0.251,
+   "gap_sd": -0.89
+  }
+ },
+ "ood_stats_file": {
+  "rural_states_flagged(z>6)": 0.751,
+  "urban_states_flagged(z>6)": 0.063
+ }
+}

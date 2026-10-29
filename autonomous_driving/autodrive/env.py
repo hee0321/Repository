@@ -1,6 +1,6 @@
 """자율주행 환경. gymnasium이 있으면 gymnasium.Env로, 없으면 같은 인터페이스의 일반 클래스로 동작.
 
-합성 서킷(닫힌 트랙), 실제 한국 도로 경로(열린 경로 + 교통 규칙), 시골길(좁은 길·비포장·밤·트랙터·보행자)
+합성 서킷(닫힌 트랙), 실제 한국 도로 경로(열린 경로 + 교통 규칙), 시골길(좁은 길·비포장·밤·일반 차량 흐름·보행자)
 모두 같은 환경으로 돈다.
 """
 from __future__ import annotations
@@ -117,7 +117,22 @@ class AutoDriveEnv(_Base):
         if nx is None:
             return np.inf
         d, sg = nx
-        return d if sg.state(self.t) != "green" else np.inf
+        if sg.state(self.t) == "green":
+            return np.inf
+        # 빨간불 우회전: 정지선 앞에서 한 번 멈췄으면(우회전 일시정지 완료) 더 멈출 필요 없음 → 관측에서도 '정지 필요 없음'
+        if sg.right_turn and sg.state(self.t) == "red" and \
+                (self.rules.signals.index(sg), sg.phase_id(self.t)) in self.vlog._rt_stopped:
+            return np.inf
+        return d
+
+    def limit_ahead(self, s):
+        """관측용 '지금 지켜야 할 제한속도': 앞쪽 제한속도가 낮아지는 곳(예: 어린이보호구역 30)까지
+        2 m/s² 로 줄여 맞출 수 있는 속도와 현재 제한속도 중 작은 값 (기준 제어기의 '앞 구간 미리 보기'와 같은 정보).
+        예전엔 현재 지점 제한속도만 보여서, 정책이 보호구역에 들어선 뒤에야 감속해 1~2초 과속했음."""
+        dl, lims = self.rules.limits_ahead(s, 60.0)
+        if not len(lims):
+            return self.rules.limit_at(s)
+        return float(min(self.rules.limit_at(s), np.min(np.sqrt(lims ** 2 + 2 * 2.0 * np.maximum(dl - 3.0, 0)))))
 
     def edge_clearance(self):
         return self.track.width / 2 - abs(self._d) - self.params.car_width / 2
@@ -140,7 +155,7 @@ class AutoDriveEnv(_Base):
         obs = np.concatenate([
             self.lidar_ranges / 30.0,
             [c.v / p.max_speed, c.steer / p.max_steer, (d - self._dref) / (self.track.width / 2), np.sin(he), np.cos(he),
-             self.rules.limit_at(s) / p.max_speed, min(stop, 100.0) / 100.0,
+             self.limit_ahead(s) / p.max_speed, min(stop, 100.0) / 100.0,
              np.clip(self.track.curvature_ahead(s, 15.0) * 5.0, 0, 2)],
             lead,
             [self.params.mu, self.track.width / 8.0, self.sight / 150.0, self.rules.light,
@@ -194,6 +209,9 @@ class AutoDriveEnv(_Base):
         self.ob_l = np.array([o.get("l", 2 * o.get("r", 1.0)) for o in sp], float)
         self.ob_kind = [o.get("kind", "car" if o.get("v", 0) else "object") for o in sp]
         self.ob_dlim = np.array([o.get("d_to", o.get("d", 0.0)) for o in sp], float)
+        self._enter_on = np.zeros(len(sp), bool)
+        self._ob_vdes = np.array([o.get("v_after", o.get("v", 0.0)) if o.get("kind") == "entering" else o.get("v", 0.0) for o in sp], float)
+        self._pass_t = -1e9
         self._seg = self.track.project(p0)[2]
         self._s = s0
         obs = self._observe()
@@ -206,6 +224,27 @@ class AutoDriveEnv(_Base):
     def _move_obstacles(self):
         if not len(self.ob_s):
             return
+        # 옆길에서 들어오는 차: 내 차가 trigger m 안으로 오면 내 차로로 들어오고, 다 들어오면 v_after 까지 가속
+        for k, o in enumerate(self.obstacle_specs):
+            if o.get("kind") != "entering":
+                continue
+            if not self._enter_on[k] and 0 < self._gap(self.ob_s[k]) < o.get("trigger", 35.0):
+                self._enter_on[k] = True
+            if self._enter_on[k]:
+                tgt = self.ob_dlim[k]
+                stp = o.get("vd", 1.5) * self.dt
+                self.ob_d[k] = tgt if abs(tgt - self.ob_d[k]) <= stp else self.ob_d[k] + np.sign(tgt - self.ob_d[k]) * stp
+                if abs(self.ob_d[k] - tgt) >= 1.0:
+                    self.ob_v[k] = 0.0      # 아직 들어오는 중: 서서 기다림 (다 들어오면 위의 차간 유지 규칙으로 출발)
+        # 같은 방향 차들은 내 차를 뒤에서 들이받지 않게 따라온다(간단한 차간 유지): 내 차가 앞 25 m 안 같은 차로면 내 속도까지
+        for k in range(len(self.ob_s)):
+            if self.ob_kind[k] in ("car", "entering") and self._ob_vdes[k] > 0.5 and (self.ob_kind[k] != "entering" or self._enter_on[k]):
+                behind = -self._gap(self.ob_s[k])   # 내 차가 그 차보다 앞선 거리
+                same = abs(self._d - self.ob_d[k]) < self.ob_r[k] + self.params.car_width / 2 + 0.3
+                tgt = self._ob_vdes[k]
+                if same and 0 < behind < 25:
+                    tgt = min(tgt, self.car.v * min(1.0, max(0.0, (behind - 7.0) / 10.0)))
+                self.ob_v[k] = max(0.0, min(tgt, self.ob_v[k] + 1.5 * self.dt)) if tgt >= self.ob_v[k] else max(tgt, self.ob_v[k] - 6.0 * self.dt)
         self.ob_s = self.ob_s + self.ob_v * self.dt
         if self.track.closed:
             self.ob_s %= self.track.length
@@ -213,6 +252,8 @@ class AutoDriveEnv(_Base):
             self.ob_s = np.clip(self.ob_s, -50, self.track.length + 50)
         # 옆으로 움직이는 것(길 건너는 보행자): 차가 15 m 안으로 오면 건너기 시작, 목표 d에서 멈춤
         for k in np.nonzero(self.ob_vd)[0]:
+            if self.ob_kind[k] == "entering":
+                continue
             if 0 < self._gap(self.ob_s[k]) < 25 or self.ob_d[k] != self.ob_specs_d0(k):
                 step = self.ob_vd[k] * self.dt
                 tgt = self.ob_dlim[k]
@@ -241,11 +282,23 @@ class AutoDriveEnv(_Base):
                         self.vlog.unsafe_meet += 1; ev["unsafe"] = True
                     else:
                         self.vlog.yield_ok += 1; ev["yield_ok"] = True
-                elif self.ob_v[k] > 0.5:   # 같은 방향 느린 차(트랙터) 앞지르기
+                elif self.ob_v[k] > 0.5:   # 같은 방향 느린 차 앞지르기: 허용 구간 + 시야 확보 + 마주 오는 차 없음일 때만
                     on = self.oncoming()
-                    if self.sight < cfg["overtake_min_sight_m"] or on is not None:
+                    if (not self.rules.passing_ok_at(self._s) or self.sight < cfg["overtake_min_sight_m"]
+                            or on is not None):
                         self.vlog.unsafe_overtake += 1; ev["unsafe"] = True
+                    else:
+                        self.vlog.legal_overtake = getattr(self.vlog, "legal_overtake", 0) + 1
         self._prev_gap = np.array([self._gap(x) for x in self.ob_s])
+
+    def is_passing(self):
+        """같은 방향으로 가는 더 느린 차의 -15 m ~ +25 m 안에서 그 차보다 왼쪽에 있으면 '앞지르는 중'
+        (나가기·옆 지나기), 그 뒤 3초는 제 차로로 돌아오는 중으로 본다."""
+        for k in range(len(self.ob_s)):
+            if self.ob_v[k] > 0.5 and -15 < self._gap(self.ob_s[k]) < 25 and self._d > self.ob_d[k] + 0.5:
+                self._pass_t = self.t
+                return True
+        return self.t - self._pass_t < 3.0
 
     def collided(self):
         for k in range(len(self.ob_s)):
@@ -263,7 +316,7 @@ class AutoDriveEnv(_Base):
         accel = a[1] * (p.max_accel if a[1] >= 0 else p.max_brake)
         self.car.step(steer, accel, self.dt)
         if gravel and self.car.v > 1.0:  # 자갈길: 바퀴가 조금씩 미끄러져 방향이 흔들림
-            self.car.yaw += float(self.rng.normal(0, 0.004 * self.car.v))
+            self.car.yaw += float(self.rng.normal(0, 0.003 * self.car.v))
         self._move_obstacles()
         self.steps += 1
         self.t += self.dt
@@ -273,7 +326,8 @@ class AutoDriveEnv(_Base):
         ds = (self._s - prev_s + L / 2) % L - L / 2 if self.track.closed else self._s - prev_s
         self._prev_s = self._s
         self.progress += ds
-        ev = self.vlog.update(self.rules, prev_s, self._s, self.t, self.car.v, self._d, self.dt, p.car_width / 2)
+        ev = self.vlog.update(self.rules, prev_s, self._s, self.t, self.car.v, self._d, self.dt, p.car_width / 2,
+                              passing=self.is_passing())
         ev["unsafe"] = False
         ev["yield_ok"] = False
         self._pass_events(ev)
@@ -292,6 +346,8 @@ class AutoDriveEnv(_Base):
         hit = self.collided()
         if hit:
             self.vlog.collisions += 1
+            if any(self.ob_kind[k] == "entering" and abs(self._gap(self.ob_s[k])) < 6 for k in range(len(self.ob_s))):
+                self.vlog.entering_conflict = getattr(self.vlog, "entering_conflict", 0) + 1
         self.crashed = abs(self._d) > margin or hit
         lim = self.rules.limit_at(self._s)
         over = max(0.0, v - lim)

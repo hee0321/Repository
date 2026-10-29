@@ -72,7 +72,53 @@ def fetch(name: str, lat: float, lon: float, radius: int = 800, refresh: bool = 
 
 
 KEEP_TAGS = ("highway", "name", "maxspeed", "maxspeed:type", "oneway", "lanes", "hazard",
-             "school_zone", "zone:maxspeed", "maxspeed:conditional")
+             "school_zone", "zone:maxspeed", "maxspeed:conditional", "surface", "tracktype", "width")
+RURAL_DRIVABLE = ("secondary", "tertiary", "unclassified", "residential", "living_street", "track",
+                  "secondary_link", "tertiary_link")
+
+
+def fetch_osm_api(name: str, bbox: tuple, refresh: bool = False) -> dict:
+    """Overpass 가 안 될 때 쓰는 OSM 공식 API(/api/0.6/map, 작은 영역만) → fetch()와 같은 작은 JSON 캐시.
+    bbox = (min_lon, min_lat, max_lon, max_lat). 시골길처럼 좁은 지역용. 데이터 © OpenStreetMap contributors, ODbL."""
+    import xml.etree.ElementTree as ET
+    path = os.path.join(DATA_DIR, f"{name}.json")
+    if os.path.exists(path) and not refresh:
+        with open(path, encoding="utf-8") as f:
+            return json.load(f)
+    url = "https://api.openstreetmap.org/api/0.6/map?bbox=" + ",".join(f"{x:.5f}" for x in bbox)
+    req = urllib.request.Request(url, headers={"User-Agent": UA})
+    with urllib.request.urlopen(req, timeout=120) as r:
+        root = ET.fromstring(r.read())
+    tags = lambda e: {t.get("k"): t.get("v") for t in e.iter("tag")}
+    allnodes = {n.get("id"): n for n in root.iter("node")}
+    ways, used, schools = [], set(), []
+    for w in root.iter("way"):
+        t = tags(w)
+        if t.get("highway") in RURAL_DRIVABLE:
+            ns = [nd.get("ref") for nd in w.iter("nd")]
+            ways.append({"id": int(w.get("id")), "nodes": [int(x) for x in ns],
+                         "tags": {k: t[k] for k in KEEP_TAGS if k in t}})
+            used.update(ns)
+        if t.get("amenity") in ("school", "kindergarten"):
+            pts = [allnodes[nd.get("ref")] for nd in w.iter("nd") if nd.get("ref") in allnodes]
+            if pts:
+                schools.append({"name": t.get("name", ""), "amenity": t["amenity"],
+                                "lat": float(np.mean([float(p.get("lat")) for p in pts])),
+                                "lon": float(np.mean([float(p.get("lon")) for p in pts]))})
+    for n in allnodes.values():
+        t = tags(n)
+        if t.get("amenity") in ("school", "kindergarten"):
+            schools.append({"name": t.get("name", ""), "amenity": t["amenity"], "lat": float(n.get("lat")), "lon": float(n.get("lon"))})
+    nodes = {k: [round(float(allnodes[k].get("lat")), 7), round(float(allnodes[k].get("lon")), 7),
+                 1 if tags(allnodes[k]).get("highway") == "traffic_signals" else 0] for k in used if k in allnodes}
+    lat0, lon0 = (bbox[1] + bbox[3]) / 2, (bbox[0] + bbox[2]) / 2
+    data = {"name": name, "center": [lat0, lon0], "bbox": list(bbox), "source": "OSM API 0.6 map",
+            "attribution": "© OpenStreetMap contributors, ODbL 1.0", "osm_base": root.get("generator"),
+            "nodes": nodes, "ways": ways, "schools": schools}
+    os.makedirs(DATA_DIR, exist_ok=True)
+    with open(path, "w", encoding="utf-8") as f:
+        json.dump(data, f, ensure_ascii=False, separators=(",", ":"))
+    return data
 
 
 def compact(raw: dict, name, lat, lon, radius) -> dict:
@@ -155,7 +201,7 @@ def build_graph(data: dict):
             school = tag_school or near_child
             attrs = dict(length=float(np.hypot(*np.subtract(xy[b], xy[a]))), highway=hw, name=t.get("name", ""),
                          limit_kmh=min(limit, int(zone["limit_kmh"])) if school else limit, school_zone=school,
-                         oneway=ow, lanes=lanes, school_source="tag" if tag_school else ("near_child_facility" if near_child else ""))
+                         oneway=ow, lanes=lanes, surface=t.get("surface"), maxspeed_tag=t.get("maxspeed"), school_source="tag" if tag_school else ("near_child_facility" if near_child else ""))
             G.add_edge(a, b, **attrs)
             if not ow:
                 G.add_edge(b, a, **attrs)
