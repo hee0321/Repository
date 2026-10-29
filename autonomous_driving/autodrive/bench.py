@@ -144,6 +144,41 @@ def compare(new: dict, best: dict, min_gain=0.5, suite="all", urban_tol=1.0, rur
     return len(reasons) == 0, reasons
 
 
+def safety_totals(card: dict, names=None) -> dict:
+    """점수표 전체(또는 names)의 안전 항목 합계."""
+    sc = {k: v for k, v in card["scenarios"].items() if names is None or k in names}
+    return {"crashes": sum(bool(v["crashed"]) for v in sc.values()),
+            "collisions": sum(v.get("collisions", 0) for v in sc.values()),
+            "signal_violations": sum(v["red_runs"] + v.get("right_turn_no_stop", 0) for v in sc.values()),
+            "rural_unsafe": sum(v.get("unsafe_meet", 0) + v.get("ped_unsafe", 0) + v.get("unsafe_overtake", 0) for v in sc.values()),
+            "school_speeding_s": round(sum(v["school_speeding_s"] for v in sc.values()), 2)}
+
+
+def aggregate_dominates(new: dict, best: dict, suite="all", min_gain=0.5):
+    """관문 보완 규칙(집계 안전 우위). 시나리오별 조건(compare)에 걸려도 아래를 '모두' 만족하면 승격:
+      - 안전 항목 합계가 하나도 나빠지지 않음: 이탈 수, 충돌 수, 신호·우회전 위반 수, 시골길 위험 행동 수
+        (각각 ≤ 최고), 어린이보호구역 과속 합 ≤ 최고 + 1.0 s
+      - 도시 평균 ≥ 최고 (허용치 없음)
+      - 전체 평균 ≥ 최고 + min_gain, (suite="all"이면) 시골길 평균 ≥ 최고 + min_gain
+    즉 '어떤 안전 항목도 더 많지 않고 도시도 낮지 않은데 전체·시골이 더 좋은' 모델만. 남은 시나리오별 회귀는
+    승격 기록(note)과 점수표에 그대로 남긴다."""
+    names = list(BENCHMARK) if suite == "urban" else list(ALL_BENCH)
+    n, b = safety_totals(new, names), safety_totals(best, names)
+    why = []
+    for k in ("crashes", "collisions", "signal_violations", "rural_unsafe"):
+        if n[k] > b[k]:
+            why.append(f"{k} {b[k]}→{n[k]}")
+    if n["school_speeding_s"] > b["school_speeding_s"] + 1.0:
+        why.append(f"school_speeding_s {b['school_speeding_s']}→{n['school_speeding_s']}")
+    if new["urban"] < best["urban"]:
+        why.append(f"도시 {best['urban']}→{new['urban']}")
+    if new["total"] < best["total"] + min_gain:
+        why.append(f"전체 {best['total']}→{new['total']}")
+    if suite == "all" and (new.get("rural") or -1e9) < (best.get("rural") or -1e9) + min_gain:
+        why.append(f"시골 {best.get('rural')}→{new.get('rural')}")
+    return len(why) == 0, why, n, b
+
+
 def scorecard_md(card: dict, title: str) -> str:
     cols = ["completion", "crashed", "time_s", "mean_speed_kmh", "mean_lane_dev_m", "speeding_s",
             "school_speeding_s", "red_runs", "right_turn_no_stop", "collisions", "centerline_s",

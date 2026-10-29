@@ -126,7 +126,24 @@ python -m pytest tests -q                 # 점검 (약 10초)
 - cycle2는 승격 판단을 처음에 시골길까지 넣어 했다가(아직 시골길을 배우기 전이라 불공정) 거절됐고, 도시 단계는 도시 벤치마크로만 판단하도록 고친 뒤 같은 후보를 다시 판단해 승격했어요.
 
 
-전체 리더보드: [`results/leaderboard.md`](results/leaderboard.md). 설계와 분석은 [`docs/발전전략.md`](docs/발전전략.md).
+### 시골길 수정 뒤 (벤치마크 v2.1: 시골길 일반 차량 흐름 + 실제 OSM 시골길, 도시·시골 섞기 학습)
+
+| 모델 | 총점 | 도시 | 시골길 | 이탈 | 신호·우회전 위반 | 시골길 위험 |
+|---|---|---|---|---|---|---|
+| 기준 제어기 | 97.96 | 97.86 | 98.09 | 0 | 0 | 0 |
+| 이전 최고(사이클 2) | 60.25 | 75.49 | 41.21 | 7 | 2 | 3 |
+| **새 최고(사이클 14)** | **83.65** | **83.89** | **83.35** | **2** | 2 | 3 |
+
+```bash
+python improve.py --budget-minutes 6 --rural            # 섞기 학습(도시 50 : 시골 50, 도시 anchor) — 기본
+python improve.py --budget-minutes 6 --rural --init last # 직전 후보에서 이어 학습 (비교·anchor 는 최고 모델)
+python improve.py --rural --promote-cycle 14             # 학습 없이 후보 다시 판단
+python tools/diagnose_forgetting.py weights/best.zip ... # 잊어버림 진단
+```
+
+원인·수정·관문 규칙: [`docs/시골길_회귀_분석.md`](docs/시골길_회귀_분석.md). v2 리더보드: [`results/leaderboard_v2.md`](results/leaderboard_v2.md).
+
+전체 리더보드(v1): [`results/leaderboard.md`](results/leaderboard.md). 설계와 분석은 [`docs/발전전략.md`](docs/발전전략.md).
 
 ## 자율 주행 모드 (`autopilot.py`)
 

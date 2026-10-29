@@ -12,3 +12,5 @@ time,model,total,urban,rural,finished,crashes,violations,speeding_s,school_speed
 2026-10-30 06:36,cycle12-rural-mix(bc),72.67,72.53,72.84,14/18,4,3,0.3,0.3,0.304,2,no,8.0,gangnam_reverse: 신호·우회전 위반 증가 0→1; gangnam_traffic: 새로 이탈; gangnam_traffic: 충돌 증가; gangnam_traffic: 완주율 하락 1.0→0.255; ga
 2026-10-30 06:43,cycle13-rural-mix(bc),79.13,86.08,70.44,15/18,3,0,0.0,0.0,0.264,5,no,7.0,gangnam_traffic: 시골길 위험 행동 증가; gangnam_traffic: 점수 크게 하락 95.27→86.96; rural_wide_traffic: 새로 이탈; rural_wide_traffic: 충돌 
 2026-10-30 06:52,cycle14-rural-mix(bc),83.65,83.89,83.35,16/18,2,2,0.0,0.0,0.258,3,no,8.5,gangnam_reverse: 신호·우회전 위반 증가 0→1; gangnam_traffic: 시골길 위험 행동 증가; gangnam_traffic: 점수 크게 하락 95.27→87.06; rural_wide_traf
+2026-10-30 06:57,cycle13-rural-mix(bc)-재판단,79.13,86.08,70.44,15/18,3,0,0.0,0.0,0.264,5,no,0.0,gangnam_traffic: 시골길 위험 행동 증가; gangnam_traffic: 점수 크게 하락 95.27→86.96; rural_wide_traffic: 새로 이탈; rural_wide_traffic: 충돌 
+2026-10-30 06:57,cycle14-rural-mix(bc)-재판단,83.65,83.89,83.35,16/18,2,2,0.0,0.0,0.258,3,yes,0.0,"집계 안전 우위로 승격 (이탈 7→2, 신호·우회전 위반 2→2, 시골 위험 3→3); 남은 시나리오별 회귀; gangnam_reverse: 신호·우회전 위반 증가 0→1; gangnam_traffic: 시골길 위험"

@@ -21,7 +21,7 @@ import time
 
 import numpy as np
 
-from autodrive.bench import compare, evaluate, scorecard_md
+from autodrive.bench import aggregate_dominates, compare, evaluate, scorecard_md
 from autodrive.controllers import PurePursuitController
 from autodrive.scenarios import BENCH_VERSION, RURAL_OSM, STAGES, make_env, sample_mixed_spec, sample_train_spec
 
@@ -321,11 +321,11 @@ def cycle(args, k, log=log_print):
     return finalize(args, k, cand, card, best_card, t0, log)
 
 
-def finalize(args, k, cand, card, best_card, t0, log=log_print):
+def finalize(args, k, cand, card, best_card, t0, log=log_print, rejudge=False):
     # 실패 사례 모으기
     from autodrive.bench import ALL_BENCH as BENCHMARK
     nf = 0
-    with open(FAIL, "a", encoding="utf-8") as f:
+    with open(FAIL if not rejudge else os.devnull, "a", encoding="utf-8") as f:
         for name, r in card["scenarios"].items():
             if r["crashed"] or r["red_runs"] or r.get("right_turn_no_stop") or r["school_speeding_s"] > 0.5:
                 spec = dict(BENCHMARK[name]); spec["fail_s"] = r.get("fail_s", 0.0)
@@ -338,15 +338,28 @@ def finalize(args, k, cand, card, best_card, t0, log=log_print):
         ok, reasons = card["total"] > -1e9, ["첫 모델"]
     else:
         ok, reasons = compare(card, best_card, suite="all" if args.rural else "urban", urban_tol=args.urban_tol)
+        if not ok and args.gate == "aggregate":
+            ok2, why2, n_, b_ = aggregate_dominates(card, best_card, suite="all" if args.rural else "urban")
+            if ok2:
+                ok = True
+                reasons = [f"집계 안전 우위로 승격 (이탈 {b_['crashes']}→{n_['crashes']}, 신호·우회전 위반 {b_['signal_violations']}→"
+                           f"{n_['signal_violations']}, 시골 위험 {b_['rural_unsafe']}→{n_['rural_unsafe']}); 남은 시나리오별 회귀"] + reasons
+            else:
+                reasons = reasons + ["집계 안전 우위 아님: " + ", ".join(why2)]
     if ok:
         shutil.copy(cand, BEST)
         st = os.path.join(W, f"cand_{k}_stats.npz")
         if os.path.exists(st):
             shutil.copy(st, STATS)
         json.dump(card, open(BEST_CARD, "w"), ensure_ascii=False, indent=1)
+        with open(os.path.join(R, "promotions.jsonl"), "a", encoding="utf-8") as f:
+            f.write(json.dumps({"time": dt.datetime.now().strftime("%Y-%m-%d %H:%M"), "cycle": k, "candidate": card.get("candidate"),
+                                "total": card["total"], "urban": card["urban"], "rural": card["rural"],
+                                "previous": None if best_card is None else {x: best_card[x] for x in ("total", "urban", "rural")},
+                                "reasons": reasons}, ensure_ascii=False) + "\n")
     log(scorecard_md(card, f"사이클 {k} 후보"))
     log(f"  승격: {'예' if ok else '아니오'} ({'; '.join(reasons) if reasons else '모든 조건 통과'}), 새 실패 사례 {nf}개")
-    tag = f"cycle{k}" + (("-rural-mix" if not args.no_mix else "-rural") if args.rural else "") + f"({card.get('candidate', '')})"
+    tag = f"cycle{k}" + (("-rural-mix" if not args.no_mix else "-rural") if args.rural else "") + f"({card.get('candidate', '')})" + ("-재판단" if rejudge else "")
     append_leaderboard(card_row(tag, card, "yes" if ok else "no",
                                 ("; ".join(reasons))[:120] if reasons else "통과", round((time.time() - t0) / 60, 1)))
     return card, ok
@@ -362,6 +375,10 @@ if __name__ == "__main__":
     ap.add_argument("--rural", action="store_true", help="시골길 단계(4)까지 커리큘럼에 넣기 (도시 점수 회귀 금지 조건은 그대로)")
     ap.add_argument("--init", choices=["best", "last"], default="best",
                     help="last: 직전 사이클 후보가 총점이 더 높으면 거기서 이어 학습(비교·anchor 는 최고 모델)")
+    ap.add_argument("--gate", choices=["strict", "aggregate"], default="aggregate",
+                    help="strict: 시나리오별 조건만. aggregate: 시나리오별 조건에 걸려도 집계 안전 우위(bench.aggregate_dominates)면 승격")
+    ap.add_argument("--promote-cycle", type=int, default=None,
+                    help="학습 없이 results/scorecard_cycleN.json 후보를 지금 최고 모델과 다시 판단(같은 벤치마크 버전일 때만)")
     ap.add_argument("--no-mix", action="store_true", help="시골길 사이클에서 예전 방식(단계 커리큘럼만) 쓰기")
     ap.add_argument("--urban-ratio", type=float, default=0.5, help="섞기 학습에서 도시 데이터 비율")
     ap.add_argument("--anchor-w", type=float, default=1.0, help="도시 상태에서 이전 최고 정책에 묶는 항의 가중치")
@@ -369,6 +386,15 @@ if __name__ == "__main__":
                     help="시골길 점수가 +5 이상 오를 때만 허용하는 도시 평균 점수 하락 폭(시나리오별 안전 조건은 그대로)")
     ap.add_argument("--refresh-stats", action="store_true", help="관측 분포(weights/obs_stats.npz)만 다시 계산")
     a = ap.parse_args()
+    if a.promote_cycle is not None:
+        k = a.promote_cycle
+        card = json.load(open(os.path.join(R, f"scorecard_cycle{k}.json"), encoding="utf-8"))
+        best_card = json.load(open(BEST_CARD, encoding="utf-8"))
+        if card.get("bench") != BENCH_VERSION or best_card.get("bench") != BENCH_VERSION:
+            raise SystemExit(f"벤치마크 버전이 달라 비교 불가: 후보 {card.get('bench')}, 최고 {best_card.get('bench')}, 지금 {BENCH_VERSION}")
+        cand = os.path.join(W, f"cand_{k}_{card.get('candidate', 'bc')}.zip")
+        finalize(a, k, cand, card, best_card, time.time(), rejudge=True)
+        raise SystemExit
     if a.refresh_stats:
         rng = np.random.default_rng(a.seed)
         X = []
@@ -393,6 +419,6 @@ if __name__ == "__main__":
     for path in sorted(set([os.path.join(R, "leaderboard.csv"), LB_CSV])):
         if os.path.exists(path):
             with open(path, encoding="utf-8") as f:
-                start += sum(1 for r in csv.DictReader(f) if r["model"].startswith("cycle") and "재평가" not in r["model"])
+                start += sum(1 for r in csv.DictReader(f) if r["model"].startswith("cycle") and "재평가" not in r["model"] and "재판단" not in r["model"])
     for k in range(start, start + a.cycles):
         cycle(a, k)
