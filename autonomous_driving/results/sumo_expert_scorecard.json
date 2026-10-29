@@ -1,5 +1,5 @@
 {
- "total": 99.25,
+ "total": 99.33,
  "scenarios": {
   "gangnam@101": {
    "speeding_s": 0.0,
@@ -63,15 +63,15 @@
    "right_turn_no_stop": 0,
    "right_turn_ok": 2,
    "collisions": 0,
-   "harsh_brake": 2,
-   "signal_stops": 2,
+   "harsh_brake": 1,
+   "signal_stops": 3,
    "lane_changes": 0,
    "dist_m": 1408.11,
    "completion": 1.0,
    "arrived": true,
-   "time_s": 152.5,
-   "mean_speed_kmh": 37.9,
-   "score": 99.0
+   "time_s": 158.5,
+   "mean_speed_kmh": 36.5,
+   "score": 99.5
   },
   "daechi_school@101": {
    "speeding_s": 0.0,

@@ -147,6 +147,10 @@ python -m sumo_kr.train --budget-minutes 8   # 기준 운전자 평가 → BC/DA
 | 최고 학습 모델 (BC/DAgger) | 95.58 | 6/6 | 0 | 신호 1 |
 | BC+PPO (2사이클, 승격 거절) | 74.5 / 72.8 | 5/6 · 6/6 | 1 · 0 | 과속 늘어남 |
 
+**SUMO 자율 주행 모드** (2D와 같은 안전 감시기·같은 `rules/autopilot.yaml`): `python autopilot.py --scenario sumo_gangnam --force`
+또는 `python -m sumo_kr.autopilot --eval --force`. 최고 모델이 직접 운전(--force)하면 6판 모두 도착, 자율 비율 86%, 개입 요청 49회
+(모델·기준 운전자 차이 28, 처음 보는 상황 20, TTC 1), 충돌·신호 위반·과속 0. 자세히: [`sumo_kr/README.md`](sumo_kr/README.md#자율-주행-모드-인간-개입-요청)
+
 ## 다음에 해 볼 것
 
 [`docs/발전전략.md`](docs/발전전략.md)의 계획 참고: 매주 자동 개선 사이클, 병렬화, 카메라 인식, CARLA/Donkey/SUMO, 실제 시골 OSM 지역(경기·충청 마을의 `highway=unclassified/track`), 덕 프로젝트(`duck_skills_korean/`)의 한국어 명령 연결.

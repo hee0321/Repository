@@ -1,0 +1,186 @@
+{
+ "engage": "신호·우회전 위반 1건 (--force)",
+ "model": "ppo",
+ "summary": {
+  "runs": 6,
+  "arrived": 6,
+  "autonomous_share": 0.864,
+  "takeovers": 49,
+  "safe_stops": 0,
+  "takeover_reasons": {
+   "모델·기준 운전자 차이": 28,
+   "처음 보는 상황(OOD)": 20,
+   "충돌 위험(TTC<2s)": 1
+  },
+  "collisions": 0,
+  "red_runs": 0,
+  "right_turn_no_stop": 0,
+  "speeding_s": 0.0,
+  "school_speeding_s": 0.0
+ },
+ "runs": [
+  {
+   "scenario": "gangnam",
+   "seed": 101,
+   "model": "ppo",
+   "arrived": true,
+   "end": "arrived",
+   "completion": 1.0,
+   "time_s": 315.5,
+   "autonomous_share": 0.765,
+   "modes": {
+    "AUTONOMOUS": 483,
+    "TAKEOVER": 148
+   },
+   "takeovers": 18,
+   "safe_stops": 0,
+   "takeover_reasons": {
+    "처음 보는 상황(OOD)": 7,
+    "모델·기준 운전자 차이": 11
+   },
+   "collisions": 0,
+   "red_runs": 0,
+   "right_turn_no_stop": 0,
+   "right_turn_ok": 1,
+   "speeding_s": 0.0,
+   "school_speeding_s": 0.0,
+   "harsh_brake": 3
+  },
+  {
+   "scenario": "gangnam",
+   "seed": 202,
+   "model": "ppo",
+   "arrived": true,
+   "end": "arrived",
+   "completion": 1.0,
+   "time_s": 268.0,
+   "autonomous_share": 0.841,
+   "modes": {
+    "AUTONOMOUS": 451,
+    "TAKEOVER": 85
+   },
+   "takeovers": 12,
+   "safe_stops": 0,
+   "takeover_reasons": {
+    "처음 보는 상황(OOD)": 4,
+    "모델·기준 운전자 차이": 8
+   },
+   "collisions": 0,
+   "red_runs": 0,
+   "right_turn_no_stop": 0,
+   "right_turn_ok": 1,
+   "speeding_s": 0.0,
+   "school_speeding_s": 0.0,
+   "harsh_brake": 1
+  },
+  {
+   "scenario": "gangnam_reverse",
+   "seed": 101,
+   "model": "ppo",
+   "arrived": true,
+   "end": "arrived",
+   "completion": 1.0,
+   "time_s": 144.5,
+   "autonomous_share": 0.896,
+   "modes": {
+    "AUTONOMOUS": 259,
+    "TAKEOVER": 30
+   },
+   "takeovers": 5,
+   "safe_stops": 0,
+   "takeover_reasons": {
+    "처음 보는 상황(OOD)": 3,
+    "모델·기준 운전자 차이": 2
+   },
+   "collisions": 0,
+   "red_runs": 0,
+   "right_turn_no_stop": 0,
+   "right_turn_ok": 0,
+   "speeding_s": 0.0,
+   "school_speeding_s": 0.0,
+   "harsh_brake": 0
+  },
+  {
+   "scenario": "gangnam_reverse",
+   "seed": 202,
+   "model": "ppo",
+   "arrived": true,
+   "end": "arrived",
+   "completion": 1.0,
+   "time_s": 158.5,
+   "autonomous_share": 0.849,
+   "modes": {
+    "AUTONOMOUS": 269,
+    "TAKEOVER": 48
+   },
+   "takeovers": 6,
+   "safe_stops": 0,
+   "takeover_reasons": {
+    "처음 보는 상황(OOD)": 3,
+    "모델·기준 운전자 차이": 3
+   },
+   "collisions": 0,
+   "red_runs": 0,
+   "right_turn_no_stop": 0,
+   "right_turn_ok": 2,
+   "speeding_s": 0.0,
+   "school_speeding_s": 0.0,
+   "harsh_brake": 2
+  },
+  {
+   "scenario": "daechi_school",
+   "seed": 101,
+   "model": "ppo",
+   "arrived": true,
+   "end": "arrived",
+   "completion": 1.0,
+   "time_s": 238.0,
+   "autonomous_share": 0.922,
+   "modes": {
+    "AUTONOMOUS": 439,
+    "TAKEOVER": 37
+   },
+   "takeovers": 5,
+   "safe_stops": 0,
+   "takeover_reasons": {
+    "처음 보는 상황(OOD)": 2,
+    "모델·기준 운전자 차이": 2,
+    "충돌 위험(TTC<2s)": 1
+   },
+   "collisions": 0,
+   "red_runs": 0,
+   "right_turn_no_stop": 0,
+   "right_turn_ok": 0,
+   "speeding_s": 0.0,
+   "school_speeding_s": 0.0,
+   "harsh_brake": 3
+  },
+  {
+   "scenario": "daechi_school",
+   "seed": 202,
+   "model": "ppo",
+   "arrived": true,
+   "end": "arrived",
+   "completion": 1.0,
+   "time_s": 230.0,
+   "autonomous_share": 0.954,
+   "modes": {
+    "AUTONOMOUS": 439,
+    "TAKEOVER": 21
+   },
+   "takeovers": 3,
+   "safe_stops": 0,
+   "takeover_reasons": {
+    "처음 보는 상황(OOD)": 1,
+    "모델·기준 운전자 차이": 2
+   },
+   "collisions": 0,
+   "red_runs": 0,
+   "right_turn_no_stop": 0,
+   "right_turn_ok": 0,
+   "speeding_s": 0.0,
+   "school_speeding_s": 0.0,
+   "harsh_brake": 2
+  }
+ ]
+}

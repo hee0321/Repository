@@ -1,7 +1,8 @@
 """SUMO + PPO: 한국 규칙을 지키며 실제 강남역·대치동 교통 속을 달리는 법 배우기 (CPU).
 
     python -m sumo_kr.train --budget-minutes 8         # BC(DAgger) → PPO → 평가 → 승격 판단
-    python -m sumo_kr.train --eval-only                # 기준 운전자/현재 최고 모델 점수표만
+    python -m sumo_kr.train --eval-only                # 기준 운전자/현재 최고 모델 점수표 + 자율 주행 모드 개입 통계
+    python -m sumo_kr.train --eval-only --force-autopilot  # 개입 통계를 모델이 직접 운전하는 상태로
 가중치: weights/sumo_best.zip (git 무시). 점수: results/sumo_leaderboard.md
 """
 from __future__ import annotations
@@ -184,6 +185,7 @@ def main():
     ap.add_argument("--bc-frac", type=float, default=0.4)
     ap.add_argument("--n-envs", type=int, default=4)
     ap.add_argument("--eval-only", action="store_true")
+    ap.add_argument("--force-autopilot", action="store_true", help="--eval-only 때 점수표 기준을 못 넘어도 모델로 자율 모드 통계")
     a = ap.parse_args()
     log = lambda *x: print(*x, flush=True)
     os.makedirs(W, exist_ok=True); os.makedirs(R, exist_ok=True)
@@ -195,6 +197,9 @@ def main():
     if a.eval_only:
         if os.path.exists(BEST):
             log("최고 모델:", summarize(evaluate(BEST)))
+        # 자율 주행 모드(안전 감시기 + 인간 개입 요청) 통계: results/sumo_autopilot_scorecard.md
+        from .autopilot import evaluate_autopilot
+        evaluate_autopilot("best", force=a.force_autopilot, log=log)
         return
     from stable_baselines3 import PPO
     from stable_baselines3.common.callbacks import BaseCallback

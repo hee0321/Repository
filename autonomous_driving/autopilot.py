@@ -5,6 +5,7 @@
     python autopilot.py --scenario track --model best            # 합성 서킷
     python autopilot.py --scenario rural_night --model best      # 시골길 밤
     python autopilot.py --scenario gangnam_traffic --model none  # 모델 없이 기준 제어기
+    python autopilot.py --scenario sumo_gangnam --force          # SUMO 실제 교통 (sumo_kr/autopilot.py, 같은 감시기)
 출력: media/autopilot_<시나리오>.gif / .mp4 / .html(재생기), results/autopilot_<시나리오>_events.jsonl
 """
 from __future__ import annotations
@@ -185,6 +186,11 @@ def signal_state(env):
 
 
 def run(args):
+    if args.scenario.startswith("sumo_"):  # SUMO 실제 교통 (같은 감시기·같은 rules/autopilot.yaml) → sumo_kr/autopilot.py
+        from sumo_kr.autopilot import main as sumo_main
+        argv = ["--scenario", args.scenario, "--model", args.model, "--seed", str(args.seed or 101)]
+        argv += ["--force"] * args.force + ["--quiet"] * args.quiet + (["--alert-cmd", args.alert_cmd] if args.alert_cmd else [])
+        return sumo_main(argv)
     name = ALIASES.get(args.scenario, args.scenario)
     spec = ALL_BENCH[name]
     cfg = load_yaml(os.path.join(HERE, "rules", "autopilot.yaml"))
@@ -253,7 +259,7 @@ def run(args):
 
 if __name__ == "__main__":
     ap = argparse.ArgumentParser()
-    ap.add_argument("--scenario", default="gangnam", help="gangnam | track | obstacles | school | rural | rural_night | 벤치마크 이름")
+    ap.add_argument("--scenario", default="gangnam", help="gangnam | track | obstacles | school | rural | rural_night | 벤치마크 이름 | sumo_gangnam | sumo_gangnam_reverse | sumo_daechi_school")
     ap.add_argument("--model", default="best", help="best | 가중치 경로 | none")
     ap.add_argument("--force", action="store_true", help="점수표 기준을 못 넘어도 자율 모드 켜기(시험용)")
     ap.add_argument("--seed", type=int, default=0)

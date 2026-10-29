@@ -242,6 +242,9 @@ class SumoKREnv(gym.Env if gym else object):
             if c["right"] and c["st"] in "rR" and key in self._stopped_at:
                 vt = min(vt, 15 / 3.6)
                 self.rule_note = "우회전 일시정지 후 서행"
+                if self.right_turn_must_yield():  # 멈춘 뒤에도 교차로에 들어오는 차가 있으면 양보(정지선에서 대기)
+                    vt = min(vt, math.sqrt(2 * b * max(d, 0)))
+                    self.rule_note = "우회전 양보 대기"
             elif c["st"] in "rR" or v * v / (2 * 4.5) < d:
                 vt = min(vt, math.sqrt(2 * b * max(d, 0)))
                 self.rule_note = "우회전 일시정지" if c["right"] else "신호 정지"
@@ -249,6 +252,31 @@ class SumoKREnv(gym.Env if gym else object):
         if vt < 0.1:
             a = -4.5
         return np.array([np.clip(a / (4.5 if a < 0 else 2.6), -1, 1), 0.0], np.float32)
+
+    def junction_conflicts(self, horizon=60.0):
+        """교차로 안에서 내 경로와 겹치는 차(SUMO junction foes) → [(foe, 내 진입 거리, 내 진출 거리, foe 도착 s, foe 빠져나감 s)]."""
+        t = self.traci
+        out = []
+        try:
+            foes = t.vehicle.getJunctionFoes("ego", horizon)
+        except Exception:  # pragma: no cover (SUMO < 1.15)
+            return out
+        for f in foes:
+            fid, ed, fd, ex, fx = f[0], f[1], f[2], f[3], f[4]
+            if fid == "ego" or fx < 0:
+                continue
+            fv = t.vehicle.getSpeed(fid)
+            fa = fd / fv if fv > 0.5 else (0.0 if fd < 1.0 else np.inf)
+            fe = fx / fv if fv > 0.5 else (np.inf if fd < 1.0 else np.inf)
+            out.append((fid, ed, ex, fa, fe))
+        return out
+
+    def right_turn_must_yield(self, crawl=3.0, margin=1.5):
+        """빨간불 우회전(일시정지 뒤): 내가 서행(crawl m/s)으로 교차로를 빠져나가기 전에 foe가 충돌 지점에 오면 기다림."""
+        for _, ed, ex, fa, _ in self.junction_conflicts():
+            if fa < ex / crawl + margin:
+                return True
+        return False
 
     def _obs_want(self):
         t = self.traci
