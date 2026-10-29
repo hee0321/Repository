@@ -1,4 +1,4 @@
-# 리더보드 (벤치마크 v2)
+# 리더보드 (벤치마크 v2.1)
 
 `python improve.py`가 사이클마다 한 줄씩 추가해요. 점수는 높을수록 좋아요.
 
@@ -12,3 +12,8 @@
 | 2026-10-30 06:02 | cycle9-rural-mix(ppo) | 88.63 | 83.98 | 94.45 | 17/18 | 1 | 1 | 6.5 | 6.5 | 0.246 | 2 | no | 7.1 | gangnam_reverse: 신호·우회전 위반 증가 0→1; gangnam_reverse: 어린이보호구역 과속 증가 0.0→1.15s |
 | 2026-10-30 06:11 | cycle10-rural-mix(ppo) | 83.22 | 81.42 | 85.46 | 16/18 | 2 | 2 | 6.7 | 6.7 | 0.279 | 3 | no | 7.1 | gangnam_reverse: 신호·우회전 위반 증가 0→1; gangnam_traffic: 어린이보호구역 과속 증가 0.5→1.75s; gangnam_traffic: 시골길 위험 행동 증가; gangnam_traf |
 | 2026-10-30 06:23 | cycle11-rural-mix(bc) | 82.65 | 82.43 | 82.92 | 16/18 | 2 | 2 | 6.6 | 6.6 | 0.262 | 2 | no | 7.1 | gangnam_reverse: 신호·우회전 위반 증가 0→1; gangnam_reverse: 어린이보호구역 과속 증가 0.0→1.2s; rural_wide_traffic: 새로 이탈; rural_wide_traffi |
+| 2026-10-30 06:29 | pure_pursuit(기준) | 97.96 | 97.86 | 98.09 | 18/18 | 0 | 0 | 0.0 | 0.0 | 0.185 | 0 | - | 0 | 규칙 기반 기준 제어기 (벤치마크 v2.1) |
+| 2026-10-30 06:29 | cycle2(최고, v2.1 재평가) | 60.25 | 75.49 | 41.21 | 11/18 | 7 | 2 | 4.7 | 0.9 | 0.414 | 3 | - | 0 | 현재 최고 모델을 새 벤치마크로 다시 잰 '이전' 점수 |
+| 2026-10-30 06:36 | cycle12-rural-mix(bc) | 72.67 | 72.53 | 72.84 | 14/18 | 4 | 3 | 0.3 | 0.3 | 0.304 | 2 | no | 8.0 | gangnam_reverse: 신호·우회전 위반 증가 0→1; gangnam_traffic: 새로 이탈; gangnam_traffic: 충돌 증가; gangnam_traffic: 완주율 하락 1.0→0.255; ga |
+| 2026-10-30 06:43 | cycle13-rural-mix(bc) | 79.13 | 86.08 | 70.44 | 15/18 | 3 | 0 | 0.0 | 0.0 | 0.264 | 5 | no | 7.0 | gangnam_traffic: 시골길 위험 행동 증가; gangnam_traffic: 점수 크게 하락 95.27→86.96; rural_wide_traffic: 새로 이탈; rural_wide_traffic: 충돌  |
+| 2026-10-30 06:52 | cycle14-rural-mix(bc) | 83.65 | 83.89 | 83.35 | 16/18 | 2 | 2 | 0.0 | 0.0 | 0.258 | 3 | no | 8.5 | gangnam_reverse: 신호·우회전 위반 증가 0→1; gangnam_traffic: 시골길 위험 행동 증가; gangnam_traffic: 점수 크게 하락 95.27→87.06; rural_wide_traf |
