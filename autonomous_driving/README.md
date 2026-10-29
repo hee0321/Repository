@@ -132,6 +132,21 @@ python -m pytest tests -q                 # 점검 (약 10초)
 - 시골길 밤: 도시에서만 배운 모델이라 출발하자마자 '처음 보는 상황(OOD)'이 떠서 끝까지 기준 제어기가 운전(자율 0%) — 의도한 안전 동작.
 
 
+## SUMO + PPO 실제 교통 (`sumo_kr/`)
+
+무료 교통 시뮬레이터 SUMO에서 강남역·대치동 실제 도로망(OSM)과 배경 차량, 신호 속을 한국 규칙(5030·어린이보호구역·신호·우회전 일시정지)으로 달려요. 자세히: [`sumo_kr/README.md`](sumo_kr/README.md)
+
+```bash
+pip install eclipse-sumo libsumo traci sumolib pyproj
+python -m sumo_kr.train --budget-minutes 8   # 기준 운전자 평가 → BC/DAgger → PPO → 승격
+```
+
+| 모델 | 총점 | 도착 | 충돌 | 위반 |
+|---|---|---|---|---|
+| 기준 운전자 | 99.25 | 6/6 | 0 | 0 |
+| 최고 학습 모델 (BC/DAgger) | 95.58 | 6/6 | 0 | 신호 1 |
+| BC+PPO (2사이클, 승격 거절) | 74.5 / 72.8 | 5/6 · 6/6 | 1 · 0 | 과속 늘어남 |
+
 ## 다음에 해 볼 것
 
 [`docs/발전전략.md`](docs/발전전략.md)의 계획 참고: 매주 자동 개선 사이클, 병렬화, 카메라 인식, CARLA/Donkey/SUMO, 실제 시골 OSM 지역(경기·충청 마을의 `highway=unclassified/track`), 덕 프로젝트(`duck_skills_korean/`)의 한국어 명령 연결.
