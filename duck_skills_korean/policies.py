@@ -125,6 +125,7 @@ class Kick(Skill):
         R = np.array([[math.cos(yaw), -math.sin(yaw)], [math.sin(yaw), math.cos(yaw)]])
         self.sim.ball_free = True
         self.sim.set_ball(p[:2] + R @ np.array([0.09, oy]), (0, 0))
+        self.sim.kick_ball0 = self.sim.ball_xy.copy()   # 공이 얼마나 굴러갔는지 재기용
 
 
 class AlphaStand(Skill):

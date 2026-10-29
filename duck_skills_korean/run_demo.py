@@ -153,7 +153,7 @@ def main():
             if a.out.endswith("demo_korean_commands.mp4"):
                 a.out = a.out.replace("demo_korean_commands.mp4", fn)
     TAG = {"skills": "MuJoCo · v8 + Pollen 공개 정책 바꿔 끼우기 (추가 학습 없음)",
-           "beak": "MuJoCo · 시연용 모델 사본 + 부리 관절 · 물건은 운동학적으로 붙임"}.get(a.preset)
+           "beak": "부리 관절(모델 사본) · 물건은 붙이기 보조"}.get(a.preset)
     if a.script:
         script = []
         for ln in open(a.script, encoding="utf-8"):
@@ -202,7 +202,7 @@ def main():
                 if idx == 0:
                     cam.distance, cam.elevation, cam.azimuth = 1.45, -35.0, yaw_deg + 35
             elif clip == "beak":     # 부리 가까이: 옆앞에서
-                cam.distance, cam.elevation, cam.azimuth = 0.62, -6.0, yaw_deg + 180 - 65
+                cam.distance, cam.elevation, cam.azimuth = 0.6, -12.0, yaw_deg + 180 - 65
             elif clip == "roulade":
                 cam.distance, cam.elevation, cam.azimuth = 0.95, -18.0, yaw_deg + 90
             elif clip.startswith("kick"):
@@ -244,8 +244,8 @@ def main():
             if hasattr(sim, "grab_snap") and getattr(inner, "grabbed", False):
                 seg["beak_grab_snap_m"] = round(sim.grab_snap, 3)
                 seg["beak_angle_rad"] = round(sim.beak_angle(), 2)
-            if seg["kind"] == "kick":
-                seg["ball_travel_m"] = round(float(np.linalg.norm(sim.ball_xy - seg.setdefault("_b0", sim.ball_xy.copy()))), 2)
+            if seg["kind"] == "kick" and getattr(sim, "kick_ball0", None) is not None:
+                seg["ball_travel_m"] = round(float(np.linalg.norm(sim.ball_xy - sim.kick_ball0)), 2)
             if np.linalg.norm(sim.ball_xy) < 1e3 and seg["kind"] == "follow_ball":
                 seg["ball_d"].append(float(np.linalg.norm(sim.ball_xy - p[:2])))
         if sim.obstacles:
@@ -290,7 +290,6 @@ def main():
             continue
         n = max(s["n"], 1)
         s["upright_frac"] = round(s["up"] / n, 3); s["mean_vx"] = round(s["vx"] / n, 3); s["mean_wz"] = round(s["wz"] / n, 3)
-        s.pop("_b0", None)
         bd = s.pop("ball_d")
         if bd:
             s["ball_dist_start_mean_end"] = [round(bd[0], 2), round(float(np.mean(bd)), 2), round(bd[-1], 2)]
