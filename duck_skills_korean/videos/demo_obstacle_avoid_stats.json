@@ -1,0 +1,42 @@
+[
+ {
+  "t0": 0.0,
+  "said": "덕아, 장애물 피해서 가",
+  "clip": "obstacle",
+  "kind": "avoid",
+  "max_roll_deg": 4.8,
+  "max_pitch_deg": 3.8,
+  "ack_head_pitch_min_rad": -0.76,
+  "ack_head_pitch_cmd_min": -0.75,
+  "ack_start_s": 0.0,
+  "min_clearance_m": 0.213,
+  "upright_frac": 1.0,
+  "mean_vx": 0.102,
+  "mean_wz": -0.022,
+  "max_tilt_gz": -1.0
+ },
+ {
+  "t0": 31.0,
+  "said": "멈춰",
+  "clip": "obstacle",
+  "kind": "stop",
+  "max_roll_deg": 0.6,
+  "max_pitch_deg": 1.5,
+  "ack_head_pitch_min_rad": -0.67,
+  "ack_head_pitch_cmd_min": -0.75,
+  "ack_start_s": 0.0,
+  "min_clearance_m": 0.5,
+  "upright_frac": 1.0,
+  "mean_vx": 0.0,
+  "mean_wz": 0.006,
+  "max_tilt_gz": -1.0
+ },
+ {
+  "obstacle_summary": {
+   "min_clearance_m": 0.213,
+   "contact_steps": 0,
+   "contacts_total": 0,
+   "upright_all": true
+  }
+ }
+]

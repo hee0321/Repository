@@ -28,8 +28,21 @@ WAKE = re.compile(r"^\s*(안녕[,.!]?\s*)?(덕|더|떡|턱)\s*(아|가|야)[,.!]
 
 RULES: list[tuple[str, callable]] = [
     (r"공.*(따라|쫓|쫒|좇|찾|가)|따라\s*가.*공", lambda t: Behavior("follow_ball", "공 따라가기 (공 위치 → 방향·속도·고개 명령)")),
+    (r"웅크|쭈그|움츠", lambda t: Behavior("roller_crouch", "웅크리기 (걷는 덕: sitstand 로 대신 · 진짜 roller_crouch 는 롤러 덕 영상)")),
+    (r"굴러|구르|데굴|앞구르기", lambda t: Behavior("roulade", "앞구르기 (Pollen roulade.onnx)")),
+    (r"(왼|오른)\S*\s*(발로)?.*(공.*)?(차|킥)", lambda t: Behavior("kick", ("오른" if "오른" in t else "왼") + "발로 공 차기 (Pollen ball_kick_"
+                                                                + ("right" if "오른" in t else "left") + ".onnx)", {"foot": "right" if "오른" in t else "left"})),
+    (r"공\s*차|킥", lambda t: Behavior("kick", "왼발로 공 차기 (Pollen ball_kick_left.onnx)", {"foot": "left"})),
+    (r"부리로|물어\s*와|물어", lambda t: Behavior("beak_pick", "부리로 물어 오기 (ground_pick + 부리 관절, 돌아서 가져옴)" if re.search(r"물어\s*와|가져와", t)
+                                                       else "부리로 물건 물기 (ground_pick + 부리 관절)", {"fetch": bool(re.search(r"물어\s*와|가져와", t))})),
+    (r"주워|집어|줍", lambda t: Behavior("ground_pick", "바닥 물건 집기 자세 (Pollen alpha_ground_pick.onnx)")),
+    (r"앉아|앉자|앉을래", lambda t: Behavior("sitstand", "앉기 (Pollen alpha_sitstand.onnx)", {"sit": True})),
+    (r"일어서", lambda t: Behavior("sitstand", "앉았다 일어서기 (Pollen alpha_sitstand.onnx)", {"sit": False})),
+    (r"선생.*일어나|alpha", lambda t: Behavior("alpha_stand", "일어나기 선생 정책 (Pollen alpha_stand.onnx)")),
+    (r"옛날.*걸|예전.*걸", lambda t: Behavior("alpha_walk", "옛 걷기 정책 (Pollen alpha_walking.onnx)", {"vx": 0.3})),
+    (r"장애물|피해서|피해\s*가|비켜서|돌아서\s*가", lambda t: Behavior("avoid", "장애물 피해서 앞으로 3 m 가기 (광선 거리 센서)")),
     (r"춤|댄스|흔들어|신나게", lambda t: Behavior("dance", "춤추기 (몸 기울이기·고개·제자리 돌기 안무)")),
-    (r"일어나|일어서|기립|일어나라", lambda t: Behavior("getup", "일어나기 (넘어지면 정책이 스스로 일어남)")),
+    (r"일어나|기립|일어나라", lambda t: Behavior("getup", "일어나기 (넘어지면 정책이 스스로 일어남)")),
     (r"멈춰|정지|그만|스톱|가만", lambda t: Behavior("stop", "멈추기 (속도 0, 고개 정면)")),
     (r"(고개|머리|목).*(왼|좌)|(왼|좌)\S*\s*(봐|보|쳐다)", lambda t: Behavior("head", "고개 왼쪽", {"head": (0, 0, HEAD_YAW, 0)})),
     (r"(고개|머리|목).*(오른|우)|(오른|우)\S*\s*(봐|보|쳐다)", lambda t: Behavior("head", "고개 오른쪽", {"head": (0, 0, -HEAD_YAW, 0)})),
@@ -56,7 +69,7 @@ def parse(text: str) -> Behavior | None:
 
 
 CANON = ["앞으로 가", "뒤로 가", "멈춰", "왼쪽으로 돌아", "오른쪽으로 돌아", "고개 왼쪽", "고개 오른쪽", "고개 들어",
-         "아래 봐", "일어나", "춤춰", "공 따라가"]
+         "아래 봐", "일어나", "춤춰", "공 따라가", "장애물 피해서 가"]
 
 
 def parse_fuzzy(text: str, cutoff: float = 0.5) -> Behavior | None:

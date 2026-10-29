@@ -16,8 +16,16 @@ from duck_sim import DuckSim, Cmd  # noqa: E402
 from korean_commands import parse  # noqa: E402
 import behaviors  # noqa: E402
 
-V8 = os.path.expanduser("~/.cache/huggingface/hub/models--pollen-robotics--microduck-training/snapshots/"
-                        "64d28ce092253c509b51031ec7ccb53790a00d0d/bundles/velstand/0045i2si_2749/model_2749.pt")
+V8 = "hf://pollen-robotics/microduck-training/bundles/velstand/0045i2si_2749/model_2749.pt"  # 공개, 읽기만
+
+
+def resolve_ckpt(path: str) -> str:
+    """hf://조직/저장소/파일 → 공개 Hub 에서 익명으로 받아 캐시 경로 반환 (계정·업로드 없음)."""
+    if not path.startswith("hf://"):
+        return path
+    from huggingface_hub import hf_hub_download
+    org, repo, *rest = path[5:].split("/")
+    return hf_hub_download(f"{org}/{repo}", "/".join(rest))
 FONT = "/usr/share/fonts/truetype/sand-box/google/Nanum Gothic/NanumGothic-Bold.ttf"
 
 # (시작 초, 말, 클립 이름)
@@ -37,6 +45,46 @@ DEFAULT_SCRIPT = [
     (64.0, "멈춰", "ball"),
 ]
 END = 66.0
+
+# 알아들음 신호(고개 들기)를 보여 주는 짧은 대본 (--preset ack)
+ACK_SCRIPT = [
+    (0.0, "덕아, 앞으로 가", "ack"),
+    (4.0, "왼쪽으로 돌아", "ack"),
+    (7.5, "멈춰", "ack"),
+    (10.0, "고개 오른쪽", "ack"),
+    (13.0, "춤춰", "ack"),
+    (20.0, "일어나!", "ack"),
+    (24.5, "공 따라가", "ack"),
+    (31.5, "멈춰", "ack"),
+]
+ACK_END = 34.0
+
+# 장애물 피하기 대본 (--preset obstacle). 코스는 덕 기준 (앞 m, 왼쪽 m)
+OBST_SCRIPT = [
+    (0.0, "덕아, 장애물 피해서 가", "obstacle"),
+    (31.0, "멈춰", "obstacle"),
+]
+OBST_END = 33.0
+OBST_COURSE = [(0.9, 0.0), (2.0, 0.04)]   # 상자 → 원기둥 (정면에 하나씩, 나머지는 치워 둠)
+# Pollen 공개 정책 바꿔 끼우기 대본 (--preset skills) — 세 번째 끝 이름이 클립 이름
+SKILLS_SCRIPT = [
+    (0.0, "덕아, 굴러", "roulade"),
+    (6.0, "웅크려", "crouch_substitute"),
+    (15.5, "앉아", "sitstand"),
+    (20.0, "일어서", "sitstand"),
+    (24.5, "바닥 물건 주워", "ground_pick"),
+    (29.5, "왼발로 공 차", "kick_left"),
+    (34.0, "오른발로 공 차", "kick_right"),
+    (38.5, "선생님처럼 일어나", "alpha_stand"),
+    (44.5, "부리로 물어", "beak_pick"),
+]
+SKILLS_END = 52.0
+# 부리 가까이 보기 (--preset beak)
+BEAK_SCRIPT = [
+    (0.0, "덕아, 물어와", "beak"),
+    (13.5, "멈춰", "beak"),
+]
+BEAK_END = 15.0
 OUT_FPS = 25
 
 
@@ -47,7 +95,7 @@ def font(sz):
 F_BIG, F_MID, F_SMALL = font(40), font(22), font(18)
 
 
-def overlay(frame, said, label, status, extra=None):
+def overlay(frame, said, label, status, extra=None, tag=None):
     im = Image.fromarray(frame).convert("RGBA")
     ov = Image.new("RGBA", im.size, (0, 0, 0, 0))
     d = ImageDraw.Draw(ov)
@@ -57,7 +105,7 @@ def overlay(frame, said, label, status, extra=None):
         d.rounded_rectangle((16, 16, 16 + w, 122), 14, fill=(255, 255, 255, 225))
         d.text((34, 26), txt, font=F_BIG, fill=(20, 20, 20, 255))
         d.text((36, 82), "→ " + label, font=F_MID, fill=(200, 80, 0, 255))
-    tag = "MuJoCo 시뮬레이션 · v8 정책 (추가 학습 없음)"
+    tag = tag or "MuJoCo 시뮬레이션 · v8 정책 (추가 학습 없음)"
     tw = d.textlength(tag, font=F_SMALL)
     d.rounded_rectangle((im.width - tw - 34, im.height - 46, im.width - 14, im.height - 14), 8, fill=(0, 0, 0, 140))
     d.text((im.width - tw - 24, im.height - 41), tag, font=F_SMALL, fill=(255, 255, 255, 255))
@@ -78,8 +126,34 @@ def main():
     ap.add_argument("--end", type=float, default=END)
     ap.add_argument("--out", default=os.path.join(HERE, "videos", "demo_korean_commands.mp4"))
     ap.add_argument("--no-clips", action="store_true")
+    ap.add_argument("--preset", choices=["full", "ack", "obstacle", "skills", "beak"], default="full")
+    ap.add_argument("--no-video", action="store_true", help="렌더 없이 측정만 (빠른 조정용)")
+    ap.add_argument("--no-ack", action="store_true", help="알아들음 신호(고개 들기) 끄기")
     a = ap.parse_args()
     script = DEFAULT_SCRIPT
+    if a.preset == "obstacle":
+        script, a.no_clips = OBST_SCRIPT, True
+        if a.end == END:
+            a.end = OBST_END
+        if a.out.endswith("demo_korean_commands.mp4"):
+            a.out = a.out.replace("demo_korean_commands.mp4", "demo_obstacle_avoid.mp4")
+    if a.preset == "ack":
+        script, a.no_clips = ACK_SCRIPT, True
+        if a.end == END:
+            a.end = ACK_END
+        if a.out.endswith("demo_korean_commands.mp4"):
+            a.out = a.out.replace("demo_korean_commands.mp4", "demo_ack_head_raise.mp4")
+    for name, sc, en, fn, clips_ in (("skills", SKILLS_SCRIPT, SKILLS_END, "demo_pollen_skills.mp4", True),
+                                     ("beak", BEAK_SCRIPT, BEAK_END, "demo_beak_fetch_closeup.mp4", False)):
+        if a.preset == name:
+            script = sc
+            a.no_clips = not clips_
+            if a.end == END:
+                a.end = en
+            if a.out.endswith("demo_korean_commands.mp4"):
+                a.out = a.out.replace("demo_korean_commands.mp4", fn)
+    TAG = {"skills": "MuJoCo · v8 + Pollen 공개 정책 바꿔 끼우기 (추가 학습 없음)",
+           "beak": "MuJoCo · 시연용 모델 사본 + 부리 관절 · 물건은 운동학적으로 붙임"}.get(a.preset)
     if a.script:
         script = []
         for ln in open(a.script, encoding="utf-8"):
@@ -87,15 +161,19 @@ def main():
                 t, s = ln.split(maxsplit=1)
                 script.append((float(t), s.strip(), "custom"))
     os.makedirs(os.path.dirname(a.out), exist_ok=True)
-    sim = DuckSim(a.ckpt)
+    sim = DuckSim(resolve_ckpt(a.ckpt), with_obstacles=(a.preset == "obstacle"))
     cam = sim.env._offline_renderer._cam
+    HP = list(sim.robot.joint_names).index("head_pitch")
     cam.elevation = -22.0
     # 시작 전 1초 안정화
     for _ in range(int(1.0 / sim.dt)):
         sim.step(Cmd())
     sim.t = 0.0
+    if a.preset == "obstacle":
+        sim.place_course(OBST_COURSE)
+    obst_log = {"min_clearance_m": 9.0, "contact_steps": 0, "contacts_total": 0}
     every = int(round(1.0 / (sim.dt * OUT_FPS)))
-    writer = imageio.get_writer(a.out, fps=OUT_FPS, codec="libx264", quality=None, macro_block_size=8,
+    writer = None if a.no_video else imageio.get_writer(a.out, fps=OUT_FPS, codec="libx264", quality=None, macro_block_size=8,
                                 output_params=["-crf", "27", "-preset", "medium", "-pix_fmt", "yuv420p"])
     log, seg = [], None
     idx, ctrl, said, label = -1, None, "", "대기"
@@ -116,11 +194,26 @@ def main():
                 label = b.label
                 if b.kind != "follow_ball":
                     sim.ball_v = np.zeros(2)
-                ctrl = behaviors.make(b, sim)
+                ctrl = behaviors.make(b, sim, ack=not a.no_ack)
             seg = {"t0": t, "said": said, "clip": clip, "kind": b.kind if b else None,
                    "n": 0, "up": 0, "vx": 0.0, "wz": 0.0, "min_gz": -1.0, "ball_d": []}
             yaw_deg = math.degrees(sim.pose()[1])
-            if b and b.kind == "follow_ball":       # 덕 뒤 높은 곳에서 공까지 보이게
+            if clip == "obstacle":   # 덕 뒤 위에서 코스가 보이게 (처음 한 번만)
+                if idx == 0:
+                    cam.distance, cam.elevation, cam.azimuth = 1.45, -35.0, yaw_deg + 35
+            elif clip == "beak":     # 부리 가까이: 옆앞에서
+                cam.distance, cam.elevation, cam.azimuth = 0.62, -6.0, yaw_deg + 180 - 65
+            elif clip == "roulade":
+                cam.distance, cam.elevation, cam.azimuth = 0.95, -18.0, yaw_deg + 90
+            elif clip.startswith("kick"):
+                cam.distance, cam.elevation, cam.azimuth = 1.1, -28.0, yaw_deg + 40
+            elif clip == "beak_pick":
+                cam.distance, cam.elevation, cam.azimuth = 0.55, -15.0, yaw_deg + 180 - 60
+            elif a.preset == "skills" and b:
+                cam.distance, cam.elevation, cam.azimuth = 0.8, -16.0, yaw_deg + 180 - 50
+            elif clip == "ack" and b and b.kind != "follow_ball":   # 옆앞에서: 고개 드는 게 잘 보이게
+                cam.distance, cam.elevation, cam.azimuth = 0.85, -15.0, yaw_deg + 180 - 70
+            elif b and b.kind == "follow_ball":       # 덕 뒤 높은 곳에서 공까지 보이게
                 cam.distance, cam.elevation, cam.azimuth = 1.15, -30.0, yaw_deg + 20
             elif b and b.kind == "head" and clip == "head" and said.startswith("고개 왼"):  # 정면에서
                 cam.distance, cam.elevation, cam.azimuth = 0.8, -18.0, yaw_deg + 180
@@ -142,23 +235,62 @@ def main():
             seg["max_pitch_deg"] = max(seg.get("max_pitch_deg", 0.0), abs(math.degrees(pt)) if gz < -0.8 else 0.0)
             if gz < -0.8 and seg.get("t_up") is None and seg["kind"] == "getup" and seg["n"] > 5:
                 seg["t_up"] = round(t - seg["t0"], 2)
+            if getattr(ctrl, "ack_active", False):
+                hp = float(sim.robot.data.joint_pos[0, HP] - sim.robot.data.default_joint_pos[0, HP])
+                seg["ack_head_pitch_min_rad"] = round(min(seg.get("ack_head_pitch_min_rad", 9.0), hp), 2)
+                seg["ack_head_pitch_cmd_min"] = round(min(seg.get("ack_head_pitch_cmd_min", 9.0), float(c.head[1])), 2)
+                seg.setdefault("ack_start_s", round(t - seg["t0"], 2))
+            inner = getattr(ctrl, "inner", ctrl)
+            if hasattr(sim, "grab_snap") and getattr(inner, "grabbed", False):
+                seg["beak_grab_snap_m"] = round(sim.grab_snap, 3)
+                seg["beak_angle_rad"] = round(sim.beak_angle(), 2)
+            if seg["kind"] == "kick":
+                seg["ball_travel_m"] = round(float(np.linalg.norm(sim.ball_xy - seg.setdefault("_b0", sim.ball_xy.copy()))), 2)
             if np.linalg.norm(sim.ball_xy) < 1e3 and seg["kind"] == "follow_ball":
                 seg["ball_d"].append(float(np.linalg.norm(sim.ball_xy - p[:2])))
-        if k % every == 0:
+        if sim.obstacles:
+            sim.sync_cpu()
+            nc, cl = sim.obstacle_contacts_and_clearance()
+            obst_log["min_clearance_m"] = min(obst_log["min_clearance_m"], cl)
+            obst_log["contact_steps"] += int(nc > 0); obst_log["contacts_total"] += nc
+            if seg:
+                seg["min_clearance_m"] = round(min(seg.get("min_clearance_m", 9.0), cl), 3)
+        if k % every == 0 and writer is not None:
             pose = "서 있음" if gz < -0.8 else ("일어나는 중" if gz < 0.0 else "넘어짐")
             status = f"{t:4.1f}s · 속도 {v[0]:+.2f} m/s · 회전 {w[2]:+.2f} rad/s · {pose}"
             if seg and seg["kind"] == "follow_ball":
                 status += f" · 공 {np.linalg.norm(sim.ball_xy - p[:2]):.2f} m"
             extra = "시뮬레이터가 덕을 엎어 놓음 → 스스로 일어나기" if t < extra_until else None
-            writer.append_data(overlay(sim.render(), said, label, status, extra))
+            if getattr(ctrl, "ack_active", False):
+                extra = behaviors.ACK_LABEL
+            elif getattr(ctrl, "event", None):
+                extra = ctrl.event
+            if sim.obstacles:
+                status += f" · 장애물까지 최소 {cl:.2f} m"
+            if getattr(sim, "carry", None) is not None:
+                status += " · 부리에 물건 있음"
+            writer.append_data(overlay(sim.render(), said, label, status, extra, tag=TAG))
         if k % 250 == 0:
             print(f"[{time.time()-t_wall:5.0f}s] t={t:5.1f} {said} gz={gz:+.2f} vx={v[0]:+.2f} wz={w[2]:+.2f}", flush=True)
     if seg:
         log.append(seg)
-    writer.close()
+    if writer is not None:
+        writer.close()
+    if sim.obstacles:
+        p, _, _ = sim.pose()
+        goal = getattr(getattr(ctrl, "inner", None), "goal", None)
+        obst_log["min_clearance_m"] = round(obst_log["min_clearance_m"], 3)
+        obst_log["upright_all"] = all(s_["up"] == s_["n"] for s_ in log)
+        if goal is not None:
+            obst_log["final_dist_to_goal_m"] = round(float(np.linalg.norm(goal - p[:2])), 3)
+        print("OBSTACLE", json.dumps(obst_log))
+        log.append({"obstacle_summary": obst_log})
     for s in log:
+        if "n" not in s:
+            continue
         n = max(s["n"], 1)
         s["upright_frac"] = round(s["up"] / n, 3); s["mean_vx"] = round(s["vx"] / n, 3); s["mean_wz"] = round(s["wz"] / n, 3)
+        s.pop("_b0", None)
         bd = s.pop("ball_d")
         if bd:
             s["ball_dist_start_mean_end"] = [round(bd[0], 2), round(float(np.mean(bd)), 2), round(bd[-1], 2)]
