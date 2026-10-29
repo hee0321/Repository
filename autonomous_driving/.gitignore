@@ -9,3 +9,4 @@ logs/
 *.ckpt
 __pycache__/
 .env
+sumo_kr/build/

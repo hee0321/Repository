@@ -57,9 +57,13 @@ class TrafficRules:
     roadside_clear_m: float = 6.0      # 길옆 시야 여유 (논두렁·나무·건물이 가까울수록 굽이에서 앞이 안 보임)
     crests: list = field(default_factory=list)  # [(s, 그 너머 보이는 거리)] 언덕 꼭대기
     rural: bool = False
+    passing_ok: np.ndarray | None = None  # 앞지르기 허용 구간(중앙선 점선·직선·시야 확보). None = 전부 금지
 
     def mu_at(self, s, default=0.9):
         return default if self.mu is None else float(self.mu[self._i(s)])
+
+    def passing_ok_at(self, s):
+        return False if self.passing_ok is None else bool(self.passing_ok[self._i(s)])
 
     def gravel_at(self, s):
         return False if self.gravel is None else bool(self.gravel[self._i(s)])
@@ -152,7 +156,7 @@ class ViolationLog:
         self._cross = False
         self._stopped_at = set()
 
-    def update(self, rules: TrafficRules, prev_s, s, t, v, d, dt, car_half_w):
+    def update(self, rules: TrafficRules, prev_s, s, t, v, d, dt, car_half_w, passing=False):
         lim = rules.limit_at(s)
         over = v - lim
         sp = over > self.tol
@@ -165,6 +169,9 @@ class ViolationLog:
             self.speeding_events += 1
         self._speeding = sp
         cross = rules.twoway_at(s) and d + car_half_w > float(CFG["centerline"]["margin_m"])  # 차 왼쪽 끝이 중앙선을 넘음
+        if cross and passing and rules.passing_ok_at(s):
+            cross = False      # 허용 구간에서 느린 차를 앞지르는 중이면 중앙선(점선) 넘기 허용
+        self.passing_s = getattr(self, "passing_s", 0.0) + (dt if passing else 0.0)
         if cross:
             self.centerline_s += dt
         if cross and not self._cross:
@@ -202,4 +209,5 @@ class ViolationLog:
                 "collisions": self.collisions, "edge_close_s": round(self.edge_close_s, 2),
                 "sight_overspeed_s": round(self.sight_overspeed_s, 2), "unsafe_overtake": self.unsafe_overtake,
                 "unsafe_meet": self.unsafe_meet, "yield_ok": self.yield_ok, "ped_unsafe": self.ped_unsafe,
-                "slip_s": round(self.slip_s, 2)}
+                "slip_s": round(self.slip_s, 2), "legal_overtake": getattr(self, "legal_overtake", 0),
+                "entering_conflict": getattr(self, "entering_conflict", 0)}

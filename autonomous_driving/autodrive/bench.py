@@ -75,7 +75,8 @@ def scenario_score(r: dict, ref_speed_kmh: float) -> float:
 
 
 # 효율 기준 속도(km/h): 규칙을 지키며 낼 수 있는 대략의 평균 속도(기준 제어기 수준)
-REF_SPEED = {"rural_day_narrow": 25, "rural_night_gravel": 18, "rural_curvy": 22, "rural_village": 18, "obstacles_track": 25, "gangnam_reverse": 25, "gangnam_traffic": 22, "oval_easy": 45, "default_2laps": 40, "hard_2laps": 35, "hard_wet": 28, "rules_track": 30,
+REF_SPEED = {"rural_day_narrow": 25, "rural_night_gravel": 24, "rural_curvy": 29, "rural_village": 28,
+             "rural_wide_traffic": 30, "jeongbae_village": 30, "jeongbae_night": 30, "jeongbae_lane": 22, "obstacles_track": 25, "gangnam_reverse": 25, "gangnam_traffic": 22, "oval_easy": 45, "default_2laps": 40, "hard_2laps": 35, "hard_wet": 28, "rules_track": 30,
              "gangnam_station": 25, "daechi_school_zone": 22}
 
 
@@ -95,10 +96,17 @@ def evaluate(policy, scenarios=None, seed=0, rural=True):
             "rural": round(float(np.mean(ru)), 2) if ru else None, "scenarios": card}
 
 
-def compare(new: dict, best: dict, min_gain=0.5, suite="all"):
+def compare(new: dict, best: dict, min_gain=0.5, suite="all", urban_tol=1.0, rural_gain_for_tol=5.0):
     """새 모델이 '점수가 오르고 + 어느 시나리오에서도 나빠지지 않을 때'만 승격.
     suite="urban"이면 도시 벤치마크만으로 판단(아직 시골길을 배우기 전 단계),
-    "all"이면 도시+시골길 모두 보고 도시 점수 하락도 막는다."""
+    "all"이면 도시+시골길 모두 보고 도시 점수 하락도 막는다.
+
+    시나리오별 조건(하나라도 걸리면 거절): 새로 이탈 / 충돌 증가 / 신호·우회전 위반 증가 /
+    어린이보호구역 과속 +1초 초과 / 완주율 -5%p 초과 / 시골길 위험 행동 증가 / 시나리오 점수 -5 초과.
+    도시 평균 조건: 기본은 -0.5 까지만 허용. 단 suite="all"에서 시골길 평균이 +rural_gain_for_tol(5) 이상 오를 때는
+    -urban_tol(1.0) 까지 허용. 1점 = 도시 10개 합으로 10점 = 예) 모든 도시 시나리오에서 차선 오차 +0.2 m
+    또는 일반 과속 합 10초 수준의 '승차감·효율' 차이. 안전 항목(이탈·충돌·위반·보호구역 과속)은 시나리오별 조건이
+    그대로 막으므로, 이 허용치로 안전이 나빠진 모델이 통과하지는 못한다."""
     reasons = []
     names = list(BENCHMARK) if suite == "urban" else list(ALL_BENCH)
     for k, b in best["scenarios"].items():
@@ -123,12 +131,52 @@ def compare(new: dict, best: dict, min_gain=0.5, suite="all"):
             reasons.append(f"{k}: 시골길 위험 행동 증가")
         if n["score"] < b["score"] - 5.0:
             reasons.append(f"{k}: 점수 크게 하락 {b['score']}→{n['score']}")
-    if best.get("urban") is not None and new.get("urban") is not None and new["urban"] < best["urban"] - 0.5:
-        reasons.append(f"도시 점수 하락 {best['urban']}→{new['urban']}")
+    if best.get("urban") is not None and new.get("urban") is not None:
+        tol = 0.5
+        if suite == "all" and best.get("rural") is not None and new.get("rural") is not None \
+                and new["rural"] >= best["rural"] + rural_gain_for_tol:
+            tol = max(tol, urban_tol)
+        if new["urban"] < best["urban"] - tol:
+            reasons.append(f"도시 점수 하락 {best['urban']}→{new['urban']} (허용 -{tol})")
     key = "urban" if suite == "urban" else "total"
     if new[key] < best[key] + min_gain:
         reasons.append(f"{'도시' if key == 'urban' else '전체'} 점수 부족 {best[key]}→{new[key]} (필요 +{min_gain})")
     return len(reasons) == 0, reasons
+
+
+def safety_totals(card: dict, names=None) -> dict:
+    """점수표 전체(또는 names)의 안전 항목 합계."""
+    sc = {k: v for k, v in card["scenarios"].items() if names is None or k in names}
+    return {"crashes": sum(bool(v["crashed"]) for v in sc.values()),
+            "collisions": sum(v.get("collisions", 0) for v in sc.values()),
+            "signal_violations": sum(v["red_runs"] + v.get("right_turn_no_stop", 0) for v in sc.values()),
+            "rural_unsafe": sum(v.get("unsafe_meet", 0) + v.get("ped_unsafe", 0) + v.get("unsafe_overtake", 0) for v in sc.values()),
+            "school_speeding_s": round(sum(v["school_speeding_s"] for v in sc.values()), 2)}
+
+
+def aggregate_dominates(new: dict, best: dict, suite="all", min_gain=0.5):
+    """관문 보완 규칙(집계 안전 우위). 시나리오별 조건(compare)에 걸려도 아래를 '모두' 만족하면 승격:
+      - 안전 항목 합계가 하나도 나빠지지 않음: 이탈 수, 충돌 수, 신호·우회전 위반 수, 시골길 위험 행동 수
+        (각각 ≤ 최고), 어린이보호구역 과속 합 ≤ 최고 + 1.0 s
+      - 도시 평균 ≥ 최고 (허용치 없음)
+      - 전체 평균 ≥ 최고 + min_gain, (suite="all"이면) 시골길 평균 ≥ 최고 + min_gain
+    즉 '어떤 안전 항목도 더 많지 않고 도시도 낮지 않은데 전체·시골이 더 좋은' 모델만. 남은 시나리오별 회귀는
+    승격 기록(note)과 점수표에 그대로 남긴다."""
+    names = list(BENCHMARK) if suite == "urban" else list(ALL_BENCH)
+    n, b = safety_totals(new, names), safety_totals(best, names)
+    why = []
+    for k in ("crashes", "collisions", "signal_violations", "rural_unsafe"):
+        if n[k] > b[k]:
+            why.append(f"{k} {b[k]}→{n[k]}")
+    if n["school_speeding_s"] > b["school_speeding_s"] + 1.0:
+        why.append(f"school_speeding_s {b['school_speeding_s']}→{n['school_speeding_s']}")
+    if new["urban"] < best["urban"]:
+        why.append(f"도시 {best['urban']}→{new['urban']}")
+    if new["total"] < best["total"] + min_gain:
+        why.append(f"전체 {best['total']}→{new['total']}")
+    if suite == "all" and (new.get("rural") or -1e9) < (best.get("rural") or -1e9) + min_gain:
+        why.append(f"시골 {best.get('rural')}→{new.get('rural')}")
+    return len(why) == 0, why, n, b
 
 
 def scorecard_md(card: dict, title: str) -> str:

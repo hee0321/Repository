@@ -1,0 +1,22 @@
+# 리더보드 (벤치마크 v2.1)
+
+`python improve.py`가 사이클마다 한 줄씩 추가해요. 점수는 높을수록 좋아요.
+
+| time | model | total | urban | rural | finished | crashes | violations | speeding_s | school_speeding_s | mean_lane_dev_m | rural_unsafe | promoted | minutes | note |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| 2026-10-30 05:28 | pure_pursuit(기준) | 97.96 | 97.86 | 98.09 | 18/18 | 0 | 0 | 0.0 | 0.0 | 0.185 | 0 | - | 0 | 규칙 기반 기준 제어기 (벤치마크 v2) |
+| 2026-10-30 05:28 | cycle2(최고, v2 재평가) | 59.27 | 74.25 | 40.54 | 11/18 | 7 | 2 | 9.0 | 5.2 | 0.416 | 3 | - | 0 | 현재 최고 모델을 새 벤치마크로 다시 잰 '이전' 점수 |
+| 2026-10-30 05:36 | cycle6-rural-mix(ppo) | 74.08 | 75.55 | 72.25 | 14/18 | 4 | 1 | 8.9 | 6.9 | 0.273 | 3 | no | 8.3 | gangnam_traffic: 어린이보호구역 과속 증가 0.5→2.2s; gangnam_traffic: 점수 크게 하락 94.14→88.79; rural_village: 시골길 위험 행동 증가; rural_villa |
+| 2026-10-30 05:45 | cycle7-rural-mix(bc) | 83.4 | 84.25 | 82.32 | 16/18 | 2 | 1 | 6.2 | 6.2 | 0.262 | 2 | no | 7.2 | gangnam_reverse: 신호·우회전 위반 증가 0→1; gangnam_reverse: 어린이보호구역 과속 증가 0.0→1.1s; rural_wide_traffic: 새로 이탈; rural_wide_traffi |
+| 2026-10-30 05:55 | cycle8-rural-mix(ppo) | 64.44 | 73.46 | 53.17 | 12/18 | 6 | 3 | 4.7 | 4.7 | 0.25 | 1 | no | 7.7 | gangnam_reverse: 신호·우회전 위반 증가 0→1; gangnam_reverse: 점수 크게 하락 16.44→8.8; rural_curvy: 충돌 증가; rural_wide_traffic: 새로 이탈; r |
+| 2026-10-30 06:02 | cycle9-rural-mix(ppo) | 88.63 | 83.98 | 94.45 | 17/18 | 1 | 1 | 6.5 | 6.5 | 0.246 | 2 | no | 7.1 | gangnam_reverse: 신호·우회전 위반 증가 0→1; gangnam_reverse: 어린이보호구역 과속 증가 0.0→1.15s |
+| 2026-10-30 06:11 | cycle10-rural-mix(ppo) | 83.22 | 81.42 | 85.46 | 16/18 | 2 | 2 | 6.7 | 6.7 | 0.279 | 3 | no | 7.1 | gangnam_reverse: 신호·우회전 위반 증가 0→1; gangnam_traffic: 어린이보호구역 과속 증가 0.5→1.75s; gangnam_traffic: 시골길 위험 행동 증가; gangnam_traf |
+| 2026-10-30 06:23 | cycle11-rural-mix(bc) | 82.65 | 82.43 | 82.92 | 16/18 | 2 | 2 | 6.6 | 6.6 | 0.262 | 2 | no | 7.1 | gangnam_reverse: 신호·우회전 위반 증가 0→1; gangnam_reverse: 어린이보호구역 과속 증가 0.0→1.2s; rural_wide_traffic: 새로 이탈; rural_wide_traffi |
+| 2026-10-30 06:29 | pure_pursuit(기준) | 97.96 | 97.86 | 98.09 | 18/18 | 0 | 0 | 0.0 | 0.0 | 0.185 | 0 | - | 0 | 규칙 기반 기준 제어기 (벤치마크 v2.1) |
+| 2026-10-30 06:29 | cycle2(최고, v2.1 재평가) | 60.25 | 75.49 | 41.21 | 11/18 | 7 | 2 | 4.7 | 0.9 | 0.414 | 3 | - | 0 | 현재 최고 모델을 새 벤치마크로 다시 잰 '이전' 점수 |
+| 2026-10-30 06:36 | cycle12-rural-mix(bc) | 72.67 | 72.53 | 72.84 | 14/18 | 4 | 3 | 0.3 | 0.3 | 0.304 | 2 | no | 8.0 | gangnam_reverse: 신호·우회전 위반 증가 0→1; gangnam_traffic: 새로 이탈; gangnam_traffic: 충돌 증가; gangnam_traffic: 완주율 하락 1.0→0.255; ga |
+| 2026-10-30 06:43 | cycle13-rural-mix(bc) | 79.13 | 86.08 | 70.44 | 15/18 | 3 | 0 | 0.0 | 0.0 | 0.264 | 5 | no | 7.0 | gangnam_traffic: 시골길 위험 행동 증가; gangnam_traffic: 점수 크게 하락 95.27→86.96; rural_wide_traffic: 새로 이탈; rural_wide_traffic: 충돌  |
+| 2026-10-30 06:52 | cycle14-rural-mix(bc) | 83.65 | 83.89 | 83.35 | 16/18 | 2 | 2 | 0.0 | 0.0 | 0.258 | 3 | no | 8.5 | gangnam_reverse: 신호·우회전 위반 증가 0→1; gangnam_traffic: 시골길 위험 행동 증가; gangnam_traffic: 점수 크게 하락 95.27→87.06; rural_wide_traf |
+| 2026-10-30 06:57 | cycle13-rural-mix(bc)-재판단 | 79.13 | 86.08 | 70.44 | 15/18 | 3 | 0 | 0.0 | 0.0 | 0.264 | 5 | no | 0.0 | gangnam_traffic: 시골길 위험 행동 증가; gangnam_traffic: 점수 크게 하락 95.27→86.96; rural_wide_traffic: 새로 이탈; rural_wide_traffic: 충돌  |
+| 2026-10-30 06:57 | cycle14-rural-mix(bc)-재판단 | 83.65 | 83.89 | 83.35 | 16/18 | 2 | 2 | 0.0 | 0.0 | 0.258 | 3 | yes | 0.0 | 집계 안전 우위로 승격 (이탈 7→2, 신호·우회전 위반 2→2, 시골 위험 3→3); 남은 시나리오별 회귀; gangnam_reverse: 신호·우회전 위반 증가 0→1; gangnam_traffic: 시골길 위험 |
+| 2026-10-30 07:03 | cycle15-rural-mix(ppo) | 77.98 | 73.13 | 84.04 | 15/18 | 3 | 3 | 0.0 | 0.0 | 0.242 | 2 | no | 5.8 | rules_track: 신호·우회전 위반 증가 1→2; rules_track: 점수 크게 하락 82.89→67.66; gangnam_traffic: 새로 이탈; gangnam_traffic: 충돌 증가; gangna |

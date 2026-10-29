@@ -26,7 +26,8 @@ from autodrive.scenarios import make_env
 
 ALIASES = {"gangnam": "gangnam_station", "track": "default_2laps", "obstacles": "obstacles_track",
            "school": "daechi_school_zone", "rural": "rural_day_narrow", "rural_night": "rural_night_gravel",
-           "rural_curvy": "rural_curvy", "village": "rural_village"}
+           "rural_curvy": "rural_curvy", "village": "rural_village", "rural_traffic": "rural_wide_traffic",
+           "jeongbae": "jeongbae_village", "jeongbae_night": "jeongbae_night", "jeongbae_lane": "jeongbae_lane"}
 HERE = os.path.dirname(os.path.abspath(__file__))
 
 
@@ -38,7 +39,8 @@ def load_yaml(path):
     except ImportError:
         return {"engage": {"min_completion": 0.95, "max_crashes": 0, "max_violations": 0, "max_school_speeding_s": 1.0},
                 "monitor": {"ttc_s": 2.0, "value_drop": 4.0, "disagreement": 0.6, "ood_z": 6.0, "over_limit_kmh": 5.0,
-                            "min_edge_clearance_m": 0.15, "hold_s": 3.0, "safe_stop_ttc_s": 1.0}}
+                            "min_edge_clearance_m": 0.15, "hold_s": 3.0, "safe_stop_ttc_s": 1.0,
+                            "oncoming_check_m": 40.0, "meet_margin_kmh": 5.0, "entering_check_m": 30.0}}
 
 
 def engage_check(card_path, cfg, scenario):
@@ -110,6 +112,21 @@ class Autopilot:
             v = env.car.v
             if v * 1.0 + v * v / 8.0 > env.sight + 3:
                 r.append(f"시야 {env.sight:.0f} m보다 빠름")
+            rc = env.rules_cfg["rural"]
+            on = env.oncoming()
+            # 좁은 길 마주 오는 차: 엇갈림 속도(15 km/h)보다 많이 빠르면
+            if (on is not None and env.track.width < 6.0 and on[0] < m.get("oncoming_check_m", 40.0)
+                    and v * 3.6 > rc["meet_speed_kmh"] + m.get("meet_margin_kmh", 5.0)):
+                r.append(f"마주 오는 차 엇갈림 위험 ({on[0]:.0f} m, {v * 3.6:.0f} km/h)")
+            # 느린 차 앞지르기: 허용 구간·시야·마주 오는 차 조건을 어기면
+            if env.is_passing() and (not env.rules.passing_ok_at(env._s) or env.sight < rc["overtake_min_sight_m"] or on is not None):
+                r.append("위험한 앞지르기(금지 구간·시야 부족·마주 오는 차)")
+            # 옆길에서 들어오는 차
+            for k in range(len(env.ob_s)):
+                if env.ob_kind[k] == "entering" and env._enter_on[k] and env.ob_d[k] != env.ob_dlim[k] \
+                        and 0 < env._gap(env.ob_s[k]) < m.get("entering_check_m", 30.0):
+                    r.append("옆길에서 차가 들어옴")
+                    break
         if a_model is not None:
             dis = float(np.abs(a_model - a_base).sum())
             if dis > m["disagreement"]:
