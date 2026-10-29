@@ -7,3 +7,10 @@ pytest>=7.0
 #   pip install torch --index-url https://download.pytorch.org/whl/cpu
 gymnasium>=0.29
 stable-baselines3>=2.3
+# 선택: SUMO 실제 교통 시뮬레이션 (sumo_kr/)
+eclipse-sumo>=1.20
+libsumo>=1.20
+traci>=1.20
+sumolib>=1.20
+pyproj>=3.6
+networkx>=3.0
