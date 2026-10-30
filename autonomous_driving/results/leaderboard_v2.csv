@@ -17,3 +17,4 @@ time,model,total,urban,rural,finished,crashes,violations,speeding_s,school_speed
 2026-10-30 07:03,cycle15-rural-mix(ppo),77.98,73.13,84.04,15/18,3,3,0.0,0.0,0.242,2,no,5.8,rules_track: 신호·우회전 위반 증가 1→2; rules_track: 점수 크게 하락 82.89→67.66; gangnam_traffic: 새로 이탈; gangnam_traffic: 충돌 증가; gangna
 2026-10-30 14:40,cycle16-rural-mix(ppo),80.62,83.96,76.44,15/18,3,3,0.2,0.0,0.193,3,no,6.2,rules_track: 신호·우회전 위반 증가 1→2; rules_track: 점수 크게 하락 82.89→68.8; rural_night_gravel: 새로 이탈; rural_night_gravel: 완주율 하락 1
 2026-10-30 14:51,cycle17-rural-mix(bc),71.72,80.44,60.81,12/18,5,2,0.6,0.0,0.223,2,no,8.8,rules_track: 신호·우회전 위반 증가 1→2; rules_track: 점수 크게 하락 82.89→68.81; gangnam_traffic: 새로 이탈; gangnam_traffic: 충돌 증가; gangna
+2026-10-30 15:05,cycle18-rural-mix(ppo),77.95,83.42,71.1,14/18,2,3,0.0,0.0,0.249,2,no,5.9,rules_track: 신호·우회전 위반 증가 1→2; rules_track: 점수 크게 하락 82.89→68.53; rural_night_gravel: 새로 이탈; rural_night_gravel: 완주율 하락 
