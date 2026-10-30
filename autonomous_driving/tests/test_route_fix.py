@@ -25,3 +25,10 @@ def test_jeongbae_lane_follows_satellite_fix():
     for la, lo in GEOMETRY_FIXES["yangpyeong_jeongbae"][0]["via"]:
         p = np.array(osm.to_local(la, lo, lat0, lon0), float)
         assert np.min(np.linalg.norm(track.center - p, axis=1)) < 1.5
+
+
+def test_gangnam_reverse_keeps_right_turn_signal():
+    """고리를 없앤 뒤에도 강남역 교차로 우회전 신호(빨간불 우회전 일시정지)가 경로에 남아 있어야 함."""
+    from autodrive.scenarios import korea_route
+    _, rules, _ = korea_route("gangnam_reverse", 1)
+    assert any(sg.right_turn for sg in rules.signals)

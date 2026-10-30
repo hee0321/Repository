@@ -166,7 +166,16 @@ def build_route(name: str, scenario: dict, signal_seed: int = 0):
     track = Track(P, width=2 * LANE_W, closed=False, name=name)
     # 신호등: 경로 위 신호 노드 → 30 m 안에 몰린 것은 한 교차로로 합치고 정지선은 3 m 앞
     rng = np.random.default_rng(signal_seed)
-    sig_s = sorted(node_d[i] for i, k in enumerate(path) if G.nodes[k]["signal"])
+    sig_s = [node_d[i] for i, k in enumerate(path) if G.nodes[k]["signal"]]
+    # 경로가 교차로 한가운데 신호 노드를 안 지나고 우회전 차로(연결로)로 돌아도, 15 m 안의 신호 노드는 그 교차로 신호로 본다
+    # (remove_detours 로 강남역 역방향 고리를 없앤 뒤 우회전 신호가 사라지지 않게)
+    for k in G.nodes:
+        if G.nodes[k]["signal"] and k not in path:
+            dd = np.hypot(P[:, 0] - G.nodes[k]["x"], P[:, 1] - G.nodes[k]["y"])
+            j = int(np.argmin(dd))
+            if dd[j] < 15.0:
+                sig_s.append(float(s[j]))
+    sig_s = sorted(sig_s)
     merged = []
     for x in sig_s:
         if not merged or x - merged[-1] > 30:
