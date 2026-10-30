@@ -11,8 +11,9 @@ from .scenarios import BENCHMARK, RURAL_BENCHMARK, make_env
 ALL_BENCH = {**BENCHMARK, **RURAL_BENCHMARK}
 
 
-def make_policy(policy):
-    """'pure_pursuit' 또는 PPO 가중치 경로/모델 → (env, obs) -> action 함수."""
+def make_policy(policy, shield=False):
+    """'pure_pursuit' 또는 PPO 가중치 경로/모델 → (env, obs) -> action 함수.
+    shield=True 면 모델 행동에 안전 실드(autodrive/shield.py)를 씌운다 (점수표에 따로 표시)."""
     if policy in (None, "pure_pursuit"):
         cache = {}
 
@@ -25,6 +26,9 @@ def make_policy(policy):
     if isinstance(policy, str):
         from stable_baselines3 import PPO
         policy = PPO.load(policy, device="cpu")
+    if shield:
+        from .shield import shielded_policy
+        return shielded_policy(policy)
     return lambda env, obs: policy.predict(obs, deterministic=True)[0]
 
 
@@ -80,20 +84,29 @@ REF_SPEED = {"rural_day_narrow": 25, "rural_night_gravel": 24, "rural_curvy": 29
              "gangnam_station": 25, "daechi_school_zone": 22}
 
 
-def evaluate(policy, scenarios=None, seed=0, rural=True):
-    act = make_policy(policy)
+def evaluate(policy, scenarios=None, seed=0, rural=True, shield=False):
+    act = make_policy(policy, shield=shield)
     card = {}
     names = scenarios or (list(BENCHMARK) + (list(RURAL_BENCHMARK) if rural else []))
     for name in names:
         env = make_env(ALL_BENCH[name], seed=seed)
         r = run_episode(env, act, seed=seed)
         r["score"] = scenario_score(r, REF_SPEED.get(name, 30))
+        sh = getattr(act, "cache", {}).get(id(env))
+        if sh is not None:
+            r.update(sh.stats())
         card[name] = r
     total = round(float(np.mean([r["score"] for r in card.values()])), 2)
     urban = [r["score"] for k, r in card.items() if k in BENCHMARK]
     ru = [r["score"] for k, r in card.items() if k in RURAL_BENCHMARK]
-    return {"total": total, "urban": round(float(np.mean(urban)), 2) if urban else None,
-            "rural": round(float(np.mean(ru)), 2) if ru else None, "scenarios": card}
+    out = {"total": total, "urban": round(float(np.mean(urban)), 2) if urban else None,
+           "rural": round(float(np.mean(ru)), 2) if ru else None, "scenarios": card}
+    if shield:
+        out["shielded"] = True
+        n = sum(r["steps"] for r in card.values())
+        out["long_override_share"] = round(sum(r["long_override_share"] * r["steps"] for r in card.values()) / max(n, 1), 3)
+        out["lat_override_share"] = round(sum(r["lat_override_share"] * r["steps"] for r in card.values()) / max(n, 1), 3)
+    return out
 
 
 def compare(new: dict, best: dict, min_gain=0.5, suite="all", urban_tol=1.0, rural_gain_for_tol=5.0):
