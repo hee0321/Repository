@@ -127,6 +127,11 @@ def train(img, nav, act, w, init=None, epochs=4, bs=256, lr=1e-3, threads=8, log
         m.load_state_dict(torch.load(init, map_location="cpu"))
     opt = torch.optim.AdamW(m.parameters(), lr=lr, weight_decay=1e-4)
     N = len(act)
+    # 드문 '결정' 순간 더 가중: 멈춘 상태에서 출발(초록불·우회전 일시정지 뒤·장애물 비킴), 멈춘 상태 유지(빨간불),
+    # 달리다 세게 감속. (BC 가 '계속 멈춰 있기'/'계속 달리기'를 따라 하는 문제 완화)
+    v = nav[:, 0] * 20.0
+    w = w * (1.0 + 3.0 * ((v < 1.0) & (act[:, 1] > 0.2)) + 1.0 * ((v < 1.0) & (act[:, 1] < -0.2))
+             + 1.0 * ((v > 5.0) & (act[:, 1] < -0.5)))
     steps = epochs * (N // bs)
     sched = torch.optim.lr_scheduler.OneCycleLR(opt, max_lr=lr, total_steps=max(steps, 1), pct_start=0.15)
     rng = np.random.default_rng(0)
@@ -154,7 +159,7 @@ def train(img, nav, act, w, init=None, epochs=4, bs=256, lr=1e-3, threads=8, log
             torch.nn.utils.clip_grad_norm_(m.parameters(), 1.0)
             opt.step()
             sched.step()
-            tot += float(loss)
+            tot += float(loss.detach())
             k += 1
         log(f"  epoch {ep + 1}/{epochs} loss {tot / max(N // bs, 1):.4f} ({time.time() - t0:.0f}s)")
     return m
@@ -167,7 +172,7 @@ def main():
     ap.add_argument("--episodes", type=int, default=96)
     ap.add_argument("--workers", type=int, default=4)
     ap.add_argument("--epochs", type=int, default=4)
-    ap.add_argument("--eval-every", action="store_true")
+    ap.add_argument("--polish", type=int, default=-1, help="모으지 않고 이 라운드까지 데이터로 다시 학습만 (이어서)")
     a = ap.parse_args()
     import torch
     os.makedirs(DATA, exist_ok=True)
@@ -175,12 +180,19 @@ def main():
     os.makedirs(wdir, exist_ok=True)
     pol = os.path.join(wdir, "vision_policy.pt")
     logp = os.path.join(DATA, "train_log.jsonl")
+    if a.polish >= 0:
+        img, nav, act, w = build_memmap(a.polish)
+        print(f"polish: dataset {len(act)} frames", flush=True)
+        m = train(img, nav, act, w, init=pol, epochs=a.epochs, lr=3e-4)
+        torch.save(m.state_dict(), pol)
+        torch.save(m.state_dict(), os.path.join(wdir, f"vision_policy_r{a.polish}p.pt"))
+        return
     for rnd in range(a.start_round, a.start_round + a.rounds):
         t = time.time()
         if rnd == 0:
             stats = collect(0, a.episodes, a.workers, None, 0.0, 0.08, 10_000)
         else:
-            beta = max(0.0, 0.5 - 0.2 * rnd)
+            beta = max(0.0, 0.4 - 0.15 * rnd)
             stats = collect(rnd, a.episodes, a.workers, pol, beta, 0.03, 10_000 + 1000 * rnd)
         print(f"round {rnd}: collected {sum(s['n'] for s in stats)} frames, crashes {sum(s['crashed'] for s in stats)}, "
               f"({time.time() - t:.0f}s)", flush=True)

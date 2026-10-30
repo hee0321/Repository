@@ -58,7 +58,8 @@ def minimap(env, ground, fr, others, size=320, span=120.0):
     half = np.radians(27.5)
     fov = [(cx, cy)] + [(cx + 45 * np.cos(fr["yaw"] + a), cy + 45 * np.sin(fr["yaw"] + a)) for a in np.linspace(-half, half, 9)]
     d.polygon(px(fov), fill=(255, 255, 0, 50))
-    body = [(fr["x"] + dx * c - dy * s, fr["y"] + dx * s + dy * c) for dx, dy in ((-0.75, -0.9), (3.25, -0.9), (3.25, 0.9), (-0.75, 0.9))]
+    k = 2.0  # 보이게 2배 크게 그림
+    body = [(fr["x"] + k * (dx * c - dy * s), fr["y"] + k * (dx * s + dy * c)) for dx, dy in ((-0.75, -0.9), (3.25, -0.9), (3.25, 0.9), (-0.75, 0.9))]
     d.polygon(px(body), fill=(230, 40, 40, 255), outline=(255, 255, 255, 255))
     return im
 
@@ -84,7 +85,8 @@ def mount_icon(size=(320, 150)):
     camy = yb - 1.35 * 34
     d.ellipse((camx - 5, camy - 5, camx + 5, camy + 5), fill=(255, 40, 40))
     d.line((camx, camy, camx + 40, camy + 40 * np.tan(np.radians(3))), fill=(255, 220, 0), width=1)
-    d.text((x1 - 6, yb + 6), "옆: 높이 1.35 m, 앞 범퍼 0.8 m 뒤, 3° 숙임, 화각 55°", font=font(11), fill=(200, 200, 200))
+    d.text((x1 - 4, yb + 4), "옆: 높이 1.35 m", font=font(12), fill=(200, 200, 200))
+    d.text((8, size[1] - 20), "앞 범퍼 0.8 m 뒤 · 3° 숙임 · 수평 화각 55°", font=font(12), fill=(200, 200, 200))
     return im
 
 
@@ -122,13 +124,14 @@ def compose(env, ground, fr, title, mount, others, stats):
     canvas.paste(mm, (W - 320, 40))
     d.text((W - 314, 44), "위성 미니맵 (북쪽 위, 120 m)", font=F14, fill=(255, 255, 255))
     canvas.paste(mount, (W - 320, 364))
-    y = 524
+    y = 594
     for line in stats:
-        d.text((W - 312, y), line, font=F14, fill=(220, 220, 220))
-        y += 20
+        d.text((16, y), line, font=F18, fill=(220, 220, 220))
+        y += 26
     if sg is not None and sg[0] < 120:
-        d.ellipse((W - 312, y + 2, W - 296, y + 18), fill=SIG_COL[sg[1]])
-        d.text((W - 290, y), f"(참고) 다음 신호 {sg[1]} — 정책은 카메라로만 봄", font=font(12), fill=(180, 180, 180))
+        d.ellipse((W - 312, 530, W - 294, 548), fill=SIG_COL[sg[1]])
+        d.text((W - 288, 530), f"(참고용 정답) 다음 신호 {sg[1]}", font=F14, fill=(180, 180, 180))
+        d.text((W - 312, 552), "정책은 신호 색을 카메라로만 봄", font=F14, fill=(180, 180, 180))
     d.rectangle((0, H - 36, W, H), fill=(0, 0, 0))
     d.text((10, H - 30), ATTRIBUTION + "  |  시뮬레이션 (실제 차량 아님)", font=F14, fill=(230, 230, 230))
     return canvas
@@ -144,7 +147,7 @@ def main():
     ap.add_argument("--still", default=None)
     ap.add_argument("--still-t", type=float, default=None)
     a = ap.parse_args()
-    import imageio.v2 as imageio
+    import imageio_ffmpeg
     import torch
     torch.set_num_threads(4)
     from autodrive.bench import ALL_BENCH, REF_SPEED, scenario_score
@@ -172,14 +175,16 @@ def main():
     mount = mount_icon()
     title = f"카메라 1대 + 위성지도로 운전 (모방학습 CNN, 실드 없음) — {a.scenario}"
     sel = [i for i, f in enumerate(frames) if a.t0 <= f["t"] < a.t0 + a.dur]
-    w = imageio.get_writer(a.out, fps=10, codec="libx264", quality=7, macro_block_size=8)
+    w = imageio_ffmpeg.write_frames(a.out, (W, H), fps=10, codec="libx264", quality=7, macro_block_size=8,
+                                    output_params=["-pix_fmt", "yuv420p"])
+    w.send(None)
     for i in sel:
         f = frames[i]
         v = f["vio"]
         stats = [f"시간 {f['t']:5.1f} s   진행 {f['s']:6.0f} m",
                  f"충돌 {'예' if f['crashed'] else '없음'}  신호위반 {v.get('red_runs', 0) + v.get('right_turn_no_stop', 0)}  과속 {v.get('speeding_s', 0):.1f}s"]
         img = compose(env, ground, f, title, mount, others_log[min(2 * i, len(others_log) - 1)], stats)
-        w.append_data(np.asarray(img))
+        w.send(np.ascontiguousarray(np.asarray(img)))
         if a.still and a.still_t is not None and abs(f["t"] - a.still_t) < 0.06:
             img.save(a.still)
     w.close()
