@@ -122,6 +122,8 @@ def main():
     ap.add_argument("--ppo-lr", type=float, default=1e-5)
     ap.add_argument("--init", default="best", help="best | 가중치 경로 (승격 판단은 언제나 최고 모델과 비교)")
     ap.add_argument("--seed", type=int, default=0)
+    ap.add_argument("--snapshots", action="store_true", help="라운드마다 후보 저장·평가")
+    ap.add_argument("--round-sec", type=float, default=0.0, help="라운드당 모으기 시간(초), 0=자동")
     a = ap.parse_args()
     import torch
     torch.set_num_threads(4)
@@ -149,21 +151,28 @@ def main():
         log(f"  쌓인 DAgger 데이터 {len(D['X'])}개 불러옴")
     t_end = t0 + a.minutes * 60
     rnd = 0
+    snaps = []
     tmp = os.path.join(W, f"_boost_cur.zip")
     with ProcessPoolExecutor(a.workers) as pool:
         while time.time() < t_end - 30:
             rnd += 1
             model.save(tmp)
-            sec = max(20.0, min(90.0, (t_end - time.time()) * 0.5))
+            sec = a.round_sec if a.round_sec > 0 else max(20.0, min(90.0, (t_end - time.time()) * 0.5))
             outs = list(pool.map(_collect, [(tmp, sec, a.seed * 1000 + k * 100 + rnd * 10 + i, focus, a.focus_p, a.shield_p,
                                              a.beta if rnd == 1 else a.beta * 0.3) for i in range(a.workers)]))
             new = {key: np.concatenate([o[j] for o in outs]) for j, key in enumerate("XYCS")}
             D = new if D is None else {key: np.concatenate([D[key], new[key]])[-a.buffer:] for key in "XYCS"}
             log(f"  라운드 {rnd}: 새 데이터 {len(new['X'])}개 (중요 {int(new['C'].sum())}, 시골 {int(new['S'].sum())}) → 버퍼 {len(D['X'])}")
             train_bc(model, D, a.epochs, a.lr, a.crit_w, anchor, a.anchor_w, log)
+            if a.snapshots:   # 라운드마다 작은 걸음 후보를 저장·평가 (관문은 같음)
+                sp = os.path.join(W, f"cand_{k}_r{rnd}.zip"); model.save(sp)
+                cs = par_evaluate(sp, pool); cs["bench"] = BENCH_VERSION
+                from autodrive.bench import safety_totals as _st
+                log(f"   스냅샷 r{rnd}: 총점 {cs['total']} (도시 {cs['urban']}, 시골 {cs['rural']}) {_st(cs)}")
+                snaps.append((sp, cs, f"r{rnd}"))
         np.savez(BUF, **D)
         np.savez(os.path.join(W, f"cand_{k}_stats.npz"), mean=D["X"].mean(0), std=D["X"].std(0) + 1e-3)
-        cands = []
+        cands = list(snaps)
         cand_bc = os.path.join(W, f"cand_{k}_bc.zip"); model.save(cand_bc)
         c = par_evaluate(cand_bc, pool); c["bench"] = BENCH_VERSION
         log(f"  후보(DAgger 부스트) 총점 {c['total']} (도시 {c['urban']}, 시골 {c['rural']})")
