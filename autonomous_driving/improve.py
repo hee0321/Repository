@@ -23,6 +23,7 @@ import numpy as np
 
 from autodrive.bench import aggregate_dominates, compare, evaluate, scorecard_md
 from autodrive.controllers import PurePursuitController
+from autodrive.shield import SafetyShield
 from autodrive.scenarios import BENCH_VERSION, RURAL_OSM, STAGES, make_env, sample_mixed_spec, sample_train_spec
 
 try:
@@ -102,9 +103,15 @@ def focus_spec(rng, name):
     return spec
 
 
+CRIT_NOTES = ("빨간불", "우회전", "앞차", "장애물", "보행자", "양보", "앞지르기")
+
+
 def critical_state(env, ex):
-    """기준 제어기가 규칙 때문에 속도를 바꾸는 중이거나 주변에 차·보행자·장애물이 가까운 상태 (안전에 중요한 순간)."""
-    if ex.rule_note != "규정 속도 유지":
+    """안전에 중요한 순간: 신호 정지/빨간불 우회전 일시정지, 앞차 따라가기·장애물·보행자·마주 오는 차, 앞 60 m 안 정지선,
+    주변 ±(15~45) m 안 차·보행자·장애물. (제한속도·시야·자갈길 서행 같은 '평소 감속'은 제외)"""
+    if any(w in ex.rule_note for w in CRIT_NOTES):
+        return True
+    if env.stop_distance() < 60.0:
         return True
     for k in range(len(env.ob_s)):
         if -15.0 < env._gap(env.ob_s[k]) < 45.0:
@@ -131,7 +138,7 @@ def is_rural_spec(spec):
 
 
 def dagger(model, minutes, stage, failures, rng, beta0=0.5, log=print, mixed=False, urban_ratio=0.5,
-           anchor=None, anchor_w=1.0, focus=None, focus_p=0.0, crit_w=1.0):
+           anchor=None, anchor_w=1.0, focus=None, focus_p=0.0, crit_w=1.0, shield_p=0.0):
     """모델이 달리는 상태를 모으고 기준 제어기의 행동을 정답으로 붙여 지도학습(BC/DAgger).
 
     mixed=True (시골길 사이클): 도시/시골 데이터를 따로 모아 미니배치마다 urban_ratio 대 나머지로 섞는다
@@ -154,10 +161,20 @@ def dagger(model, minutes, stage, failures, rng, beta0=0.5, log=print, mixed=Fal
                 spec = sample_mixed_spec(rng, failures, urban_ratio) if mixed else sample_train_spec(rng, stage, failures)
             env = make_env(spec, seed=int(rng.integers(1e9)), random_start=spec.get("start_s") is None)
             obs, _ = env.reset(seed=int(rng.integers(1e9)))
-            ex = PurePursuitController(env)
+            # shield_p: 모델이 운전하되 안전 실드를 씌워 굴림 → 실수해도 에피소드가 끝나지 않아 실수 '뒤' 상황까지 정답을 모음
+            sh = SafetyShield(env) if rng.random() < shield_p else None
+            ex = sh.exp if sh is not None else PurePursuitController(env)
             X, Y, C = D["rural" if is_rural_spec(spec) else "urban"]
             done, n = False, 0
             while not done and n < 900:
+                if sh is not None:
+                    a = sh.filter(obs, model.predict(obs, deterministic=True)[0])
+                    a_exp = sh.last["a_exp"]
+                    X.append(obs); Y.append(a_exp); C.append(critical_state(env, ex))
+                    obs, _, term, trunc, _ = env.step(a)
+                    done = term or trunc
+                    n += 1
+                    continue
                 a_exp = ex.act(obs)
                 X.append(obs); Y.append(a_exp); C.append(critical_state(env, ex))
                 if rng.random() < beta:
@@ -339,7 +356,7 @@ def cycle(args, k, log=log_print):
         log(f"  실패 사례 {len(failures)}개를 학습에 섞음, 커리큘럼 {[STAGES[s] for s in stages]}")
     budget = args.budget_minutes
     focus = [x for x in args.focus.split(",") if x] if args.focus else None
-    fkw = dict(focus=focus, focus_p=args.focus_p, crit_w=args.crit_w)
+    fkw = dict(focus=focus, focus_p=args.focus_p, crit_w=args.crit_w, shield_p=args.shield_p)
     if focus:
         log(f"  집중 연습: {focus} ({args.focus_p:.0%}), 중요 상태 가중치 x{args.crit_w}")
     X = dagger(model, budget * args.bc_frac, max(stages), failures, rng, log=log, mixed=mixed, beta0=args.beta0,
@@ -449,6 +466,7 @@ if __name__ == "__main__":
     ap.add_argument("--focus", default="", help="집중 연습할 벤치마크 시나리오(쉼표). 'auto' = 남은 실패 목록 기본값")
     ap.add_argument("--focus-p", type=float, default=0.35, help="DAgger 에피소드 중 집중 연습 비율")
     ap.add_argument("--crit-w", type=float, default=1.0, help="안전에 중요한 상태(규칙 감속·주변 차량)의 BC 손실 가중치")
+    ap.add_argument("--shield-p", type=float, default=0.0, help="DAgger 에피소드 중 '모델+실드'로 굴리는 비율")
     ap.add_argument("--beta0", type=float, default=0.5, help="DAgger 첫 라운드에서 기준 제어기가 운전하는 비율")
     ap.add_argument("--ppo-lr", type=float, default=3e-5, help="섞기 모드 PPO 학습률")
     ap.add_argument("--refresh-stats", action="store_true", help="관측 분포(weights/obs_stats.npz)만 다시 계산")
