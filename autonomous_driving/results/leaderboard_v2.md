@@ -24,3 +24,4 @@
 | 2026-10-30 14:51 | cycle17-rural-mix(bc) | 71.72 | 80.44 | 60.81 | 12/18 | 5 | 2 | 0.6 | 0.0 | 0.223 | 2 | no | 8.8 | rules_track: 신호·우회전 위반 증가 1→2; rules_track: 점수 크게 하락 82.89→68.81; gangnam_traffic: 새로 이탈; gangnam_traffic: 충돌 증가; gangna |
 | 2026-10-30 15:05 | cycle18-rural-mix(ppo) | 77.95 | 83.42 | 71.1 | 14/18 | 2 | 3 | 0.0 | 0.0 | 0.249 | 2 | no | 5.9 | rules_track: 신호·우회전 위반 증가 1→2; rules_track: 점수 크게 하락 82.89→68.53; rural_night_gravel: 새로 이탈; rural_night_gravel: 완주율 하락  |
 | 2026-10-30 15:14 | cycle19-rural-mix(r4) | 91.23 | 87.51 | 95.89 | 17/18 | 1 | 0 | 0.0 | 0.0 | 0.232 | 2 | yes | 5.7 | 통과 |
+| 2026-10-30 15:21 | cycle20-rural-mix(r6) | 92.74 | 96.67 | 87.83 | 17/18 | 1 | 1 | 0.0 | 0.0 | 0.252 | 2 | no | 4.3 | gangnam_reverse: 신호·우회전 위반 증가 0→1; gangnam_reverse: 점수 크게 하락 98.15→88.42; rural_wide_traffic: 새로 이탈; rural_wide_traffic: |
