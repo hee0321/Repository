@@ -40,6 +40,12 @@ def apply_geometry_fixes(G, fixes, lat0, lon0, tol=3.0):
                  ((a, osm.to_local(la_a, lo_a, lat0, lon0)), (b, osm.to_local(la_b, lo_b, lat0, lon0))))
         if not ok or not (G.has_edge(a, b) or G.has_edge(b, a)):
             continue
+        if fx.get("move_b"):
+            la, lo = fx["move_b"]
+            x, y = osm.to_local(la, lo, lat0, lon0)
+            G.nodes[b].update(x=float(x), y=float(y), lat=la, lon=lo)
+            for u, v in list(G.in_edges(b)) + list(G.out_edges(b)):
+                G.edges[u, v]["length"] = float(np.hypot(G.nodes[v]["x"] - G.nodes[u]["x"], G.nodes[v]["y"] - G.nodes[u]["y"]))
         vias = []
         for i, (la, lo) in enumerate(fx["via"]):
             k = f"fix_{a}_{b}_{i}"
