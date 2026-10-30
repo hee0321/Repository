@@ -9,7 +9,11 @@ N=${1:-1}; shift || true
 BRANCH=${BRANCH:-autodrive/rl-daily}
 for i in $(seq 1 "$N"); do
   echo "=== 사이클 $i/$N 시작 $(date '+%F %T')"
-  timeout 600 $PY improve.py --rural --cycles 1 "$@" || echo "사이클 실패/시간 초과 (exit $?)"
+  if [ "${MODE:-boost}" = boost ]; then   # 기본: 병렬 DAgger 부스트 (boost.py), MODE=improve 면 예전 improve.py 사이클
+    timeout 600 $PY boost.py "$@" || echo "사이클 실패/시간 초과 (exit $?)"
+  else
+    timeout 600 $PY improve.py --rural --cycles 1 "$@" || echo "사이클 실패/시간 초과 (exit $?)"
+  fi
   $PY tools/shield_card.py || true
   git add results/ >/dev/null 2>&1
   git commit -qm "RL 사이클 결과 $(date '+%F %H:%M') ($i/$N)" && git push -q origin "$BRANCH" || echo "커밋할 것 없음/푸시 실패"
