@@ -66,6 +66,52 @@ class MixEnv(gym.Env):
         return self.env.step(a)
 
 
+FOCUS_DEFAULT = ["rules_track", "obstacles_track", "gangnam_reverse", "gangnam_traffic", "rural_wide_traffic",
+                 "jeongbae_village", "jeongbae_night"]
+
+
+def focus_spec(rng, name):
+    """남은 실패 시나리오를 '조금씩 바꿔서' 연습용으로 (벤치마크와 똑같은 판은 30%만 → 외워 버리기 줄임)."""
+    from autodrive.bench import ALL_BENCH
+    import copy
+    spec = copy.deepcopy(ALL_BENCH[name])
+    spec["max_steps"] = 1500
+    if rng.random() < 0.3:
+        spec["start_s"] = 0.0
+        return spec
+    if "korea" in spec:
+        if spec["korea"] in RURAL_OSM:
+            spec["traffic_seed"] = int(rng.integers(1e6)) if rng.random() < 0.6 else None
+        else:
+            spec["signal_seed"] = int(rng.integers(5))
+    if spec.get("kind") == "rural":
+        spec["difficulty"] = float(rng.uniform(0.8, 1.3))
+        if rng.random() < 0.5:
+            spec["road_seed"] = int(rng.choice([134, 134, 34, 234, 334, 434]))
+    if spec.get("signals"):
+        spec["signal_seed"] = int(rng.integers(1e6)); spec["laps"] = 1
+    for o in spec.get("obstacles") or []:
+        o["s"] = float(o["s"] + rng.uniform(-30, 30))
+        if o.get("v", 0) > 0:
+            o["v"] = float(o["v"] * rng.uniform(0.7, 1.3))
+        o["d"] = float(o.get("d", 0.0) + rng.uniform(-0.3, 0.3))
+    if rng.random() < 0.5:
+        spec["start_s"] = None   # 무작위 출발점
+    else:
+        spec["start_s"] = 0.0
+    return spec
+
+
+def critical_state(env, ex):
+    """기준 제어기가 규칙 때문에 속도를 바꾸는 중이거나 주변에 차·보행자·장애물이 가까운 상태 (안전에 중요한 순간)."""
+    if ex.rule_note != "규정 속도 유지":
+        return True
+    for k in range(len(env.ob_s)):
+        if -15.0 < env._gap(env.ob_s[k]) < 45.0:
+            return True
+    return False
+
+
 def load_failures():
     if not os.path.exists(FAIL):
         return []
@@ -85,7 +131,7 @@ def is_rural_spec(spec):
 
 
 def dagger(model, minutes, stage, failures, rng, beta0=0.5, log=print, mixed=False, urban_ratio=0.5,
-           anchor=None, anchor_w=1.0):
+           anchor=None, anchor_w=1.0, focus=None, focus_p=0.0, crit_w=1.0):
     """모델이 달리는 상태를 모으고 기준 제어기의 행동을 정답으로 붙여 지도학습(BC/DAgger).
 
     mixed=True (시골길 사이클): 도시/시골 데이터를 따로 모아 미니배치마다 urban_ratio 대 나머지로 섞는다
@@ -94,7 +140,7 @@ def dagger(model, minutes, stage, failures, rng, beta0=0.5, log=print, mixed=Fal
     반환: 관측 배열(관측 분포 통계용, 도시+시골 모두)."""
     import torch
     t_end = time.time() + minutes * 60
-    D = {"urban": ([], []), "rural": ([], [])}
+    D = {"urban": ([], [], []), "rural": ([], [], [])}   # (관측, 정답 행동, 중요 상태 여부)
     rounds = 0
     opt = torch.optim.Adam(list(model.policy.mlp_extractor.policy_net.parameters()) +
                            list(model.policy.action_net.parameters()), lr=1e-3 if not mixed else 5e-4)
@@ -102,15 +148,18 @@ def dagger(model, minutes, stage, failures, rng, beta0=0.5, log=print, mixed=Fal
         beta = beta0 * (0.5 ** rounds)  # 처음엔 기준 제어기가 운전을 더 많이, 점점 모델이 운전
         collect_until = time.time() + max(10.0, (t_end - time.time()) * 0.45)
         while time.time() < collect_until:
-            spec = sample_mixed_spec(rng, failures, urban_ratio) if mixed else sample_train_spec(rng, stage, failures)
+            if focus and rng.random() < focus_p:
+                spec = focus_spec(rng, str(rng.choice(focus)))
+            else:
+                spec = sample_mixed_spec(rng, failures, urban_ratio) if mixed else sample_train_spec(rng, stage, failures)
             env = make_env(spec, seed=int(rng.integers(1e9)), random_start=spec.get("start_s") is None)
             obs, _ = env.reset(seed=int(rng.integers(1e9)))
             ex = PurePursuitController(env)
-            X, Y = D["rural" if is_rural_spec(spec) else "urban"]
+            X, Y, C = D["rural" if is_rural_spec(spec) else "urban"]
             done, n = False, 0
             while not done and n < 900:
                 a_exp = ex.act(obs)
-                X.append(obs); Y.append(a_exp)
+                X.append(obs); Y.append(a_exp); C.append(critical_state(env, ex))
                 if rng.random() < beta:
                     a = a_exp + rng.normal(0, 0.1, 2)   # 기준 제어기 + 약간의 흔들림
                 else:
@@ -119,13 +168,19 @@ def dagger(model, minutes, stage, failures, rng, beta0=0.5, log=print, mixed=Fal
                 done = term or trunc
                 n += 1
         for k in D:
-            D[k] = (D[k][0][-75_000:], D[k][1][-75_000:])   # 쪽마다 최근 7.5만 개
-        T = {k: (torch.as_tensor(np.array(v[0], np.float32)), torch.as_tensor(np.clip(np.array(v[1], np.float32), -1, 1)))
+            D[k] = tuple(x[-75_000:] for x in D[k])   # 쪽마다 최근 7.5만 개
+        T = {k: (torch.as_tensor(np.array(v[0], np.float32)), torch.as_tensor(np.clip(np.array(v[1], np.float32), -1, 1)),
+                 torch.as_tensor(np.array(v[2], np.float32)))
              for k, v in D.items() if len(v[0])}
         A = None
         if anchor is not None and "urban" in T:
             with torch.no_grad():
                 A = policy_mean(anchor, T["urban"][0]).clamp(-1, 1)
+
+        def wmse(pred, y, c):
+            # 안전에 중요한 상태(c=1)는 crit_w 배 무게
+            w = 1.0 + (crit_w - 1.0) * c
+            return (w[:, None] * (pred - y) ** 2).mean() / w.mean()
         n_all = sum(len(v[0]) for v in T.values())
         tot, nb = 0.0, 0
         for ep in range(6):
@@ -135,27 +190,30 @@ def dagger(model, minutes, stage, failures, rng, beta0=0.5, log=print, mixed=Fal
                 steps = max(len(T["urban"][0]) // nu, len(T["rural"][0]) // (512 - nu), 1)
                 for _ in range(steps):
                     iu = torch.randint(len(T["urban"][0]), (nu,)); ir = torch.randint(len(T["rural"][0]), (512 - nu,))
-                    xu, yu = T["urban"][0][iu], T["urban"][1][iu]
-                    xr, yr = T["rural"][0][ir], T["rural"][1][ir]
+                    xu, yu, cu = T["urban"][0][iu], T["urban"][1][iu], T["urban"][2][iu]
+                    xr, yr, cr = T["rural"][0][ir], T["rural"][1][ir], T["rural"][2][ir]
                     pu, pr = policy_mean(model, xu), policy_mean(model, xr)
-                    loss = 0.5 * ((pu - yu) ** 2).mean() + 0.5 * ((pr - yr) ** 2).mean()
-                    if A is not None:
-                        loss = loss + anchor_w * 0.5 * ((pu - A[iu]) ** 2).mean()
+                    loss = 0.5 * wmse(pu, yu, cu) + 0.5 * wmse(pr, yr, cr)
+                    if A is not None:   # anchor(이전 최고)는 '평범한' 도시 상태에서만 — 중요한 순간의 예전 실수까지 붙잡지 않게
+                        m_ = (1.0 - cu)[:, None]
+                        loss = loss + anchor_w * 0.5 * (m_ * (pu - A[iu]) ** 2).sum() / (m_.sum() * 2 + 1e-6)
                     opt.zero_grad(); loss.backward(); opt.step()
                     tot += float(loss.detach()); nb += 1
             else:
                 Xa = torch.cat([v[0] for v in T.values()]); Ya = torch.cat([v[1] for v in T.values()])
+                Ca = torch.cat([v[2] for v in T.values()])
                 perm = torch.randperm(len(Xa))
                 for i in range(0, len(Xa), 512):
                     b = perm[i:i + 512]
-                    loss = ((policy_mean(model, Xa[b]) - Ya[b]) ** 2).mean()
+                    loss = wmse(policy_mean(model, Xa[b]), Ya[b], Ca[b])
                     opt.zero_grad(); loss.backward(); opt.step()
                     tot += float(loss.detach()); nb += 1
             if time.time() > t_end + 30:
                 break
         rounds += 1
         nu_, nr_ = len(D["urban"][0]), len(D["rural"][0])
-        log(f"  DAgger 라운드 {rounds}: 데이터 {n_all}개 (도시 {nu_}, 시골 {nr_}), 손실 {tot / max(nb, 1):.4f}, β={beta:.2f}")
+        nc_ = int(sum(D["urban"][2]) + sum(D["rural"][2]))
+        log(f"  DAgger 라운드 {rounds}: 데이터 {n_all}개 (도시 {nu_}, 시골 {nr_}, 중요 상태 {nc_}), 손실 {tot / max(nb, 1):.4f}, β={beta:.2f}")
     X = np.array(D["urban"][0] + D["rural"][0], np.float32)
     return X
 
@@ -280,8 +338,12 @@ def cycle(args, k, log=log_print):
     else:
         log(f"  실패 사례 {len(failures)}개를 학습에 섞음, 커리큘럼 {[STAGES[s] for s in stages]}")
     budget = args.budget_minutes
-    X = dagger(model, budget * args.bc_frac, max(stages), failures, rng, log=log, mixed=mixed,
-               urban_ratio=args.urban_ratio, anchor=anchor, anchor_w=args.anchor_w)
+    focus = [x for x in args.focus.split(",") if x] if args.focus else None
+    fkw = dict(focus=focus, focus_p=args.focus_p, crit_w=args.crit_w)
+    if focus:
+        log(f"  집중 연습: {focus} ({args.focus_p:.0%}), 중요 상태 가중치 x{args.crit_w}")
+    X = dagger(model, budget * args.bc_frac, max(stages), failures, rng, log=log, mixed=mixed, beta0=args.beta0,
+               urban_ratio=args.urban_ratio, anchor=anchor, anchor_w=args.anchor_w, **fkw)
     if len(X):  # 이 후보가 학습한 관측 분포 (자율 모드의 '처음 보는 상황' 판단용). 승격되면 weights/obs_stats.npz 로 복사
         np.savez(os.path.join(W, f"cand_{k}_stats.npz"), mean=X.mean(0), std=X.std(0) + 1e-3)
     cand_bc = os.path.join(W, f"cand_{k}_bc.zip")
@@ -293,15 +355,15 @@ def cycle(args, k, log=log_print):
         for e in model.get_env().envs:
             e.failures = failures
         if mixed:   # 섞기 모드 PPO: 학습률을 낮춰 정책이 크게 흔들리지 않게
-            model.learning_rate = 3e-5
-            model.lr_schedule = get_schedule_fn(3e-5)
+            model.learning_rate = args.ppo_lr
+            model.lr_schedule = get_schedule_fn(args.ppo_lr)
         ppo_min = budget * (1 - args.bc_frac) - 0.3
         if mixed:
             ppo_min *= 0.7
         ppo_finetune(model, ppo_min, stages, log=log)
         if mixed:   # PPO 뒤 정리: 모델이 운전(β=0) + 기준 제어기 정답 + 도시 anchor
             dagger(model, budget * (1 - args.bc_frac) * 0.3, 4, failures, rng, beta0=0.0, log=log, mixed=True,
-                   urban_ratio=args.urban_ratio, anchor=anchor, anchor_w=args.anchor_w)
+                   urban_ratio=args.urban_ratio, anchor=anchor, anchor_w=args.anchor_w, **fkw)
         cand_ppo = os.path.join(W, f"cand_{k}_ppo.zip")
         model.save(cand_ppo)
         card_ppo = evaluate(cand_ppo); card_ppo["bench"] = BENCH_VERSION
@@ -384,8 +446,15 @@ if __name__ == "__main__":
     ap.add_argument("--anchor-w", type=float, default=1.0, help="도시 상태에서 이전 최고 정책에 묶는 항의 가중치")
     ap.add_argument("--urban-tol", type=float, default=1.0,
                     help="시골길 점수가 +5 이상 오를 때만 허용하는 도시 평균 점수 하락 폭(시나리오별 안전 조건은 그대로)")
+    ap.add_argument("--focus", default="", help="집중 연습할 벤치마크 시나리오(쉼표). 'auto' = 남은 실패 목록 기본값")
+    ap.add_argument("--focus-p", type=float, default=0.35, help="DAgger 에피소드 중 집중 연습 비율")
+    ap.add_argument("--crit-w", type=float, default=1.0, help="안전에 중요한 상태(규칙 감속·주변 차량)의 BC 손실 가중치")
+    ap.add_argument("--beta0", type=float, default=0.5, help="DAgger 첫 라운드에서 기준 제어기가 운전하는 비율")
+    ap.add_argument("--ppo-lr", type=float, default=3e-5, help="섞기 모드 PPO 학습률")
     ap.add_argument("--refresh-stats", action="store_true", help="관측 분포(weights/obs_stats.npz)만 다시 계산")
     a = ap.parse_args()
+    if a.focus == "auto":
+        a.focus = ",".join(FOCUS_DEFAULT)
     if a.promote_cycle is not None:
         k = a.promote_cycle
         card = json.load(open(os.path.join(R, f"scorecard_cycle{k}.json"), encoding="utf-8"))
