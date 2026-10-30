@@ -146,6 +146,7 @@ def main():
     ap.add_argument("--out", default="/workspace/vision_gangnam.mp4")
     ap.add_argument("--still", default=None)
     ap.add_argument("--still-t", type=float, default=None)
+    ap.add_argument("--s0", type=float, default=None, help="이 진행 거리(m)에 닿은 때부터 (t0 대신)")
     a = ap.parse_args()
     import imageio_ffmpeg
     import torch
@@ -174,7 +175,11 @@ def main():
     ground = ground_for(data_key_for(env), offline=True) if data_key_for(env) else None
     mount = mount_icon()
     title = f"카메라 1대 + 위성지도로 운전 (모방학습 CNN, 실드 없음) — {a.scenario}"
+    if a.s0 is not None:
+        a.t0 = next((f["t"] for f in frames if f["s"] >= a.s0), frames[-1]["t"] - a.dur)
     sel = [i for i, f in enumerate(frames) if a.t0 <= f["t"] < a.t0 + a.dur]
+    if a.still_t is None:
+        a.still_t = round(a.t0 + a.dur / 2, 1)
     w = imageio_ffmpeg.write_frames(a.out, (W, H), fps=10, codec="libx264", quality=7, macro_block_size=8,
                                     output_params=["-pix_fmt", "yuv420p"])
     w.send(None)
@@ -185,7 +190,7 @@ def main():
                  f"충돌 {'예' if f['crashed'] else '없음'}  신호위반 {v.get('red_runs', 0) + v.get('right_turn_no_stop', 0)}  과속 {v.get('speeding_s', 0):.1f}s"]
         img = compose(env, ground, f, title, mount, others_log[min(2 * i, len(others_log) - 1)], stats)
         w.send(np.ascontiguousarray(np.asarray(img)))
-        if a.still and a.still_t is not None and abs(f["t"] - a.still_t) < 0.06:
+        if a.still and abs(f["t"] - a.still_t) < 0.051:
             img.save(a.still)
     w.close()
     print("wrote", a.out, len(sel), "frames")

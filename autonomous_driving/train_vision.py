@@ -29,7 +29,7 @@ def train_spec(rng):
         tr, ru, _ = korea_route(name, 0)
         L = tr.length
         sp = dict(korea=name, signal_seed=int(rng.integers(6)), max_steps=1600,
-                  start_s=float(rng.uniform(0, max(1.0, L - 200))) if rng.random() < 0.8 else None)
+                  start_s=float(rng.uniform(0, max(1.0, L - 200))) if rng.random() < 0.6 else None)
         if name.startswith("jeongbae"):
             sp.update(traffic_seed=int(rng.integers(1e6)), night=bool(rng.random() < 0.4), difficulty=float(rng.uniform(0.6, 1.6)))
         else:
