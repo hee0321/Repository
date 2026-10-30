@@ -147,7 +147,7 @@ class FrontCamera:
         edge = on & (np.abs(np.abs(d) - (half - 0.25)) < 0.15 + 0.004 * dist) & ~gravel
         out[edge] = WHITE
         narrow = tr.width < 6.0
-        cen = on & (np.abs(d) < 0.12 + 0.004 * dist) & ~narrow & ~gravel
+        cen = on & (np.abs(d) < 0.12 + 0.004 * dist) & (not narrow) & ~gravel
         dash = (np.mod(s, 8.0) < 3.0)
         out[cen & twoway] = YELLOW
         out[cen & ~twoway & dash] = WHITE
