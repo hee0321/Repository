@@ -70,8 +70,12 @@ def engage_check(card_path, cfg, scenario):
 
 
 class Autopilot:
-    def __init__(self, env, model=None, cfg=None, stats=None, alert_cmd=None, quiet=False):
+    def __init__(self, env, model=None, cfg=None, stats=None, alert_cmd=None, quiet=False, shield=False):
         self.env, self.model, self.cfg = env, model, cfg
+        self.shield = None
+        if shield and model is not None:   # 모델 행동에 안전 실드(규칙 마스킹)를 씌움 (autodrive/shield.py)
+            from autodrive.shield import SafetyShield
+            self.shield = SafetyShield(env)
         self.m = cfg["monitor"]
         self.base = PurePursuitController(env)
         self.stats = stats
@@ -159,6 +163,8 @@ class Autopilot:
         a_model, std, value, ent = (None, None, 0.0, 0.0)
         if self.model is not None:
             a_model, std, value, ent = self.model_eval(obs)
+            if self.shield is not None:   # 실드를 거친 행동을 '모델 행동'으로 본다 (감시기도 이 행동을 검사)
+                a_model = self.shield.filter(obs, a_model)
         reasons, ttc = self.risks(obs, a_model, a_base, value)
         t = env.t
         prev = self.mode
@@ -215,7 +221,10 @@ def run(args):
     model, stats, why_mode = None, None, ""
     path = os.path.join("weights", "best.zip") if args.model == "best" else args.model
     if args.model != "none" and path and os.path.exists(path):
-        ok, why_mode = engage_check(os.path.join("results", "best_scorecard.json"), cfg, name)
+        card = "best_scorecard_shielded.json" if args.shield else "best_scorecard.json"
+        ok, why_mode = engage_check(os.path.join("results", card), cfg, name)
+        if args.shield:
+            why_mode = "[모델+안전 실드] " + why_mode
         if ok or args.force:
             from stable_baselines3 import PPO
             model = PPO.load(path, device="cpu")
@@ -224,7 +233,7 @@ def run(args):
         print(f"자율 모드 {'켜짐' if model is not None else '꺼짐(기준 제어기)'}: {why_mode}{' (--force)' if args.force and not ok else ''}")
     else:
         print(f"모델 없음({path}) → 기준 제어기(Pure Pursuit)로 달려요")
-    ap = Autopilot(env, model, cfg, stats, alert_cmd=args.alert_cmd, quiet=args.quiet)
+    ap = Autopilot(env, model, cfg, stats, alert_cmd=args.alert_cmd, quiet=args.quiet, shield=args.shield)
     obs, info = env.reset(seed=args.seed)
     frames, done, steps_auto, steps = [], False, 0, 0
     t0 = time.time()
@@ -288,4 +297,7 @@ if __name__ == "__main__":
     ap.add_argument("--realtime", action="store_true", help="실제 시간 속도로 돌기(스텝마다 dt 기다림)")
     ap.add_argument("--alert-cmd", default=None, help="개입 요청 때 실행할 명령 (예: 'notify-send 개입')")
     ap.add_argument("--quiet", action="store_true")
+    ap.add_argument("--shield", action="store_true",
+                    help="모델 행동에 안전 실드(빨간불·우회전 일시정지·앞차 간격·앞지르기 규칙 마스킹)를 씌우고, "
+                         "자율 모드 기준도 results/best_scorecard_shielded.json(모델+실드 점수표)으로 판단")
     run(ap.parse_args())

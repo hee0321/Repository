@@ -198,3 +198,15 @@ python -m sumo_kr.train --budget-minutes 8   # 기준 운전자 평가 → BC/DA
 - 무료 자원만 사용(CPU, 필요하면 Kaggle 무료 T4 — 직접 돌리진 않았어요).
 - 학습 가중치(`weights/`, `*.pt`, `*.zip` 등)와 시크릿은 저장소에 올리지 않아요(`.gitignore`).
 - OSM 데이터는 ODbL 출처 표시, 카카오맵/네이버지도는 링크만.
+
+## 매일 강화학습 + 안전 실드 (브랜치 `autodrive/rl-daily`)
+
+```bash
+tools/rl_daily.sh 1 --minutes 4.5 --lr 5e-5 --epochs 1 --round-sec 30 --snapshots   # 사이클 1개 ≈ 8분, 끝나면 결과 커밋·푸시
+python autopilot.py --scenario gangnam_traffic --shield   # 모델 + 안전 실드로 자율 주행
+python -c "from autodrive.bench import evaluate; print(evaluate('weights/best.zip', shield=True)['total'])"
+```
+
+- `boost.py`: 병렬 DAgger 부스트. 일꾼 여러 개가 모델이 운전하는 상태를 모으고(일부는 실드를 씌움), 기준 제어기 행동을 정답으로 붙여요. 남은 실패 시나리오(조금씩 바꾼 판)를 집중 연습하고, 데이터는 `weights/dagger_buffer.npz`에 계속 쌓아요. 신호·앞차·보행자·장애물 같은 중요한 상태는 가중치를 더 줘요. 라운드마다 스냅샷 후보를 평가하고, `improve.py`와 같은 엄격한 관문을 통과해야만 승격돼요(이탈·충돌·위반·위험 행동이 최고보다 많으면 승격 안 함).
+- `autodrive/shield.py`: 행동 단위 규칙 마스킹이에요. 규칙상 감속이 필요하면(빨간불, 우회전 일시정지, 앞차, 보행자, 제한속도) 가속을 min(모델, 기준 제어기)로 깎아요. 주변에 차·장애물이 있거나 앞지르는 중이면 조향을 기준 제어기 값으로 바꿔요.
+  **점수표는 둘로 나눠요**: `results/best_scorecard.json` = 모델 단독, `results/best_scorecard_shielded.json` = 모델+실드 (실드가 바꾼 스텝 비율도 기록).
