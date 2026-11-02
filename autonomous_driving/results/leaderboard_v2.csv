@@ -28,3 +28,4 @@ time,model,total,urban,rural,finished,crashes,violations,speeding_s,school_speed
 2026-10-31 07:31,cycle26-rural-mix(r1),90.41,86.44,95.37,17/18,1,1,0.0,0.0,0.237,2,no,4.2,gangnam_reverse: 신호·우회전 위반 증가 0→1; gangnam_reverse: 점수 크게 하락 98.15→88.44; 도시 점수 하락 87.51→86.44 (허용 -0.5); 전체 점수 부족 91.23
 2026-10-31 07:36,cycle27-rural-mix(r3),87.69,87.55,87.88,16/18,2,0,0.9,0.0,0.236,2,no,4.2,rural_wide_traffic: 새로 이탈; rural_wide_traffic: 완주율 하락 1.0→0.77; rural_wide_traffic: 점수 크게 하락 97.62→37.5; 전체 점수 부족 91.23→
 2026-11-03 07:14,cycle28-rural-mix(r2),90.84,87.35,95.2,17/18,1,0,0.0,0.0,0.227,2,no,4.3,"전체 점수 부족 91.23→90.84 (필요 +0.5); 집계 안전 우위 아님: 도시 87.51→87.35, 전체 91.23→90.84, 시골 95.89→95.2"
+2026-11-03 07:18,cycle29-rural-mix(r6),90.37,92.14,88.17,16/18,2,0,2.6,0.0,0.268,3,no,4.2,gangnam_traffic: 새로 이탈; gangnam_traffic: 시골길 위험 행동 증가; gangnam_traffic: 점수 크게 하락 97.8→45.2; rural_wide_traffic: 새로 이탈; r
