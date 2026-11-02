@@ -32,3 +32,4 @@ time,model,total,urban,rural,finished,crashes,violations,speeding_s,school_speed
 2026-11-03 07:22,cycle30-rural-mix(r5),86.45,87.47,85.18,16/18,2,0,0.0,0.0,0.23,2,no,4.2,rural_wide_traffic: 새로 이탈; rural_wide_traffic: 충돌 증가; rural_wide_traffic: 완주율 하락 1.0→0.514; rural_wide_traffic: 점수 크게 하락
 2026-11-03 07:27,cycle31-rural-mix(r5),85.46,87.57,82.83,15/18,3,0,0.7,0.0,0.241,2,no,4.2,rural_wide_traffic: 새로 이탈; rural_wide_traffic: 완주율 하락 1.0→0.828; rural_wide_traffic: 점수 크게 하락 97.62→38.36; jeongbae_vill
 2026-11-03 07:31,cycle32-rural-mix(r3),90.95,87.57,95.18,17/18,1,0,1.4,0.0,0.22,2,no,4.2,"전체 점수 부족 91.23→90.95 (필요 +0.5); 집계 안전 우위 아님: 전체 91.23→90.95, 시골 95.89→95.18"
+2026-11-03 07:36,cycle33-rural-mix(r6),90.26,86.6,94.82,17/18,1,0,0.0,0.0,0.246,2,no,4.2,rural_wide_traffic: 점수 크게 하락 97.62→91.64; 도시 점수 하락 87.51→86.6 (허용 -0.5); 전체 점수 부족 91.23→90.26 (필요 +0.5); 집계 안전 우위 아님: 도시
