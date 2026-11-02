@@ -203,11 +203,10 @@ def train(img, nav, act, w, init=None, epochs=4, bs=256, lr=1e-3, threads=8, log
           recent_from=None, recent_frac=0.4):
     """max_samples: 에포크마다 이만큼만 뽑기(매일 라운드 시간 제한). recent_from 이후 인덱스(새 라운드)에서 recent_frac."""
     import torch
-    from autodrive.vision.policy import VisionPolicy
+    from autodrive.vision.policy import VisionPolicy, load_policy
     torch.set_num_threads(threads)
-    m = VisionPolicy()
-    if init and os.path.exists(init):
-        m.load_state_dict(torch.load(init, map_location="cpu"))
+    m = load_policy(init) if init and os.path.exists(init) else VisionPolicy()   # 예전 28칸 가중치도 0 채워 이어 받음
+    m.train()
     opt = torch.optim.AdamW(m.parameters(), lr=lr, weight_decay=1e-4)
     N = len(act)
     # 드문 '결정' 순간 더 가중: 멈춘 상태에서 출발(초록불·우회전 일시정지 뒤·장애물 비킴), 멈춘 상태 유지(빨간불),
