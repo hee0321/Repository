@@ -146,7 +146,7 @@ class AutoDriveEnv(_Base):
         self.lidar_ranges = self.lidar.scan(c.pos, c.yaw, self.track.walls, self.circles)
         he = np.angle(np.exp(1j * (c.yaw - self.track.heading_at(s))))
         self._he = he
-        self._dref = self.rules.lane_ref_at(s)
+        self._dref = self.rules.lane_ref_at(s) if not self.rules.lanes else self.rules.lane_of(d)  # 여러 차로: 지금 차로
         stop = self.stop_distance()
         lo = self.lead_obstacle()
         lead = [1.0, 0.0, 0.0] if lo is None else [min(lo[0], 50.0) / 50.0, np.clip((c.v - lo[1]) / 20.0, -1, 1),
@@ -197,7 +197,11 @@ class AutoDriveEnv(_Base):
             p0 = p0 + self.track.normal_at(s0) * self.rng.uniform(-0.5, 0.5) * min(1.0, self.track.width / 6.4)
             yaw0 += self.rng.uniform(-0.15, 0.15)
             v0 = float(self.rng.uniform(0, min(8.0, self.rules.limit_at(s0))))
+        if getattr(self, "init_speed", 0.0):
+            v0 = float(self.init_speed)      # DCAS 시험: 정해진 속도로 기능 구간 진입
         self.car = BicycleCar(p0[0], p0[1], yaw0, v=v0, params=self.params)
+        if getattr(self, "monitor", None) is not None:
+            self.monitor = type(self.monitor)()
         self.steps, self.t, self.progress, self.crashed, self.finished = 0, 0.0, 0.0, False, False
         self.vlog = ViolationLog()
         sp = self.obstacle_specs
@@ -212,6 +216,15 @@ class AutoDriveEnv(_Base):
         self._enter_on = np.zeros(len(sp), bool)
         self._ob_vdes = np.array([o.get("v_after", o.get("v", 0.0)) if o.get("kind") == "entering" else o.get("v", 0.0) for o in sp], float)
         self._pass_t = -1e9
+        # 대본 있는 상대(DCAS 시험): events=[{when: 't'|'gap'|'ttc', at, v_to, decel/accel, d_to, vd}]
+        self._ev_done = [[False] * len(o.get("events", [])) for o in sp]
+        self._ob_dec = np.array([6.0] * len(sp), float)
+        self._ob_acc = np.array([1.5] * len(sp), float)
+        self._scripted = np.array([bool(o.get("events")) or o.get("scripted", False) for o in sp], bool)
+        self._lat_on = np.zeros(len(sp), bool)
+        self.indicator, self.indicator_t0 = 0, None   # 방향지시등 (-1 오른쪽 / +1 왼쪽), 켠 시각
+        self._ind_off_t = -1e9
+        self._lane_c, self._lcm_on, self.lc_events = None, False, []   # 차로 변경(MCC) 추적 (여러 차로 도로)
         self._seg = self.track.project(p0)[2]
         self._s = s0
         obs = self._observe()
@@ -221,9 +234,54 @@ class AutoDriveEnv(_Base):
         self.params.mu = self.rules.mu_at(self._s, self.base_mu)
         return obs, self._info()
 
+    def _run_events(self):
+        """대본 상대의 사건: 시각(t)·간격(gap, 내 차 기준 m)·충돌까지 시간(ttc) 조건이 되면 속도/옆 이동 시작."""
+        for k, o in enumerate(self.obstacle_specs):
+            for j, e in enumerate(o.get("events", [])):
+                if self._ev_done[k][j]:
+                    continue
+                g = self._gap(self.ob_s[k])
+                w = e.get("when", "t")
+                if w == "t":
+                    go = self.t >= e["at"]
+                elif w == "gap":
+                    go = g <= e["at"]
+                else:   # ttc: (간격 - 길이) / (내 속도 - 상대 속도)
+                    cl = self.car.v - self.ob_v[k]
+                    go = cl > 0.1 and (g - self.ob_l[k] / 2 - CAR_HALF_LEN) / cl <= e["at"]
+                if not go:
+                    continue
+                self._ev_done[k][j] = True
+                if "v_to" in e:
+                    self._ob_vdes[k] = e["v_to"]
+                    self._ob_dec[k] = e.get("decel", self._ob_dec[k])
+                    self._ob_acc[k] = e.get("accel", self._ob_acc[k])
+                if "d_to" in e:
+                    self.ob_dlim[k] = e["d_to"]
+                    self.ob_vd[k] = abs(e.get("vd", 1.0))
+                    self._lat_on[k] = True
+
     def _move_obstacles(self):
         if not len(self.ob_s):
             return
+        if self._scripted.any():
+            self._run_events()
+            for k in np.nonzero(self._scripted)[0]:
+                if self.ob_kind[k] == "entering":
+                    continue
+                tgt = self._ob_vdes[k]
+                # 대본 차도 앞의 차(대본 상대 포함)·내 차와 부딪치지 않게 간단한 차간 유지
+                moving = self._lat_on[k] and abs(self.ob_d[k] - self.ob_dlim[k]) > 0.05
+                for j in range(len(self.ob_s)):
+                    if j != k and not moving and abs(self.ob_d[j] - self.ob_d[k]) < self.ob_r[j] + self.ob_r[k] + 0.2:
+                        g = self.ob_s[j] - self.ob_s[k] - (self.ob_l[j] + self.ob_l[k]) / 2
+                        if 0 < g < 30 and self.ob_v[k] > self.ob_v[j]:
+                            tgt = min(tgt, self.ob_v[j] + max(g - 4.0, 0) * 0.4)
+                v = self.ob_v[k]
+                self.ob_v[k] = min(tgt, v + self._ob_acc[k] * self.dt) if tgt >= v else max(tgt, v - self._ob_dec[k] * self.dt)
+                if self._lat_on[k]:
+                    tgt_d, stp = self.ob_dlim[k], self.ob_vd[k] * self.dt
+                    self.ob_d[k] = tgt_d if abs(tgt_d - self.ob_d[k]) <= stp else self.ob_d[k] + np.sign(tgt_d - self.ob_d[k]) * stp
         # 옆길에서 들어오는 차: 내 차가 trigger m 안으로 오면 내 차로로 들어오고, 다 들어오면 v_after 까지 가속
         for k, o in enumerate(self.obstacle_specs):
             if o.get("kind") != "entering":
@@ -238,6 +296,8 @@ class AutoDriveEnv(_Base):
                     self.ob_v[k] = 0.0      # 아직 들어오는 중: 서서 기다림 (다 들어오면 위의 차간 유지 규칙으로 출발)
         # 같은 방향 차들은 내 차를 뒤에서 들이받지 않게 따라온다(간단한 차간 유지): 내 차가 앞 25 m 안 같은 차로면 내 속도까지
         for k in range(len(self.ob_s)):
+            if self._scripted[k] and not self.obstacle_specs[k].get("follow_me", False):
+                continue
             if self.ob_kind[k] in ("car", "entering") and self._ob_vdes[k] > 0.5 and (self.ob_kind[k] != "entering" or self._enter_on[k]):
                 behind = -self._gap(self.ob_s[k])   # 내 차가 그 차보다 앞선 거리
                 same = abs(self._d - self.ob_d[k]) < self.ob_r[k] + self.params.car_width / 2 + 0.3
@@ -252,7 +312,7 @@ class AutoDriveEnv(_Base):
             self.ob_s = np.clip(self.ob_s, -50, self.track.length + 50)
         # 옆으로 움직이는 것(길 건너는 보행자): 차가 15 m 안으로 오면 건너기 시작, 목표 d에서 멈춤
         for k in np.nonzero(self.ob_vd)[0]:
-            if self.ob_kind[k] == "entering":
+            if self.ob_kind[k] == "entering" or self._scripted[k]:
                 continue
             if 0 < self._gap(self.ob_s[k]) < 25 or self.ob_d[k] != self.ob_specs_d0(k):
                 step = self.ob_vd[k] * self.dt
@@ -261,6 +321,43 @@ class AutoDriveEnv(_Base):
                     self.ob_d[k] = tgt
                 else:
                     self.ob_d[k] += np.sign(tgt - self.ob_d[k]) * abs(step)
+
+    def _lane_track(self):
+        """차로 변경 추적 (R171 2.12 PCC / 2.13 MCC). MCC 시작 = 차 옆면(바퀴 바깥)이 차선을 넘는 순간,
+        끝 = 차 전체가 새 차로 안. 방향지시등 7초 안에 MCC가 시작 안 되면 PCC 취소(6.2.9.5 → 끔)."""
+        lw, hw = self.rules.lane_w, self.params.car_width / 2
+        if self._lane_c is None:
+            self._lane_c = self.rules.lane_of(self._d)
+        off = self._d - self._lane_c
+        if not self._lcm_on and abs(off) + hw > lw / 2:
+            side = int(np.sign(off))
+            self._lcm_on = True
+            lead = (self.t - self.indicator_t0) if (self.indicator == side and self.indicator_t0 is not None) else None
+            self.lc_events.append({"t": round(self.t, 2), "s": round(self._s, 1), "side": side, "from": self._lane_c,
+                                   "lcp_lead_s": None if lead is None else round(lead, 2), "done": False,
+                                   "ind_whole": lead is not None})
+        if self._lcm_on:
+            ev = self.lc_events[-1]
+            if self.indicator != ev["side"]:
+                ev["ind_whole"] = False          # 6.2.6: MCC 내내 지시등
+            new = self.rules.lane_of(self._d)
+            if new != self._lane_c and abs(self._d - new) + hw < lw / 2:
+                self._lcm_on = False
+                ev.update(done=True, t_end=round(self.t, 2), to=new)
+                self._lane_c = new
+                self.set_indicator(0)            # 2.12 e) 새 차로 안정 → 지시등 끔
+            elif abs(self._d - self._lane_c) + hw < lw / 2 - 0.05:
+                self._lcm_on = False             # 되돌아옴(취소)
+                ev.update(done=False, t_end=round(self.t, 2), to=self._lane_c)
+        if self.indicator and not self._lcm_on and self.indicator_t0 is not None and self.t - self.indicator_t0 > 7.0:
+            self.set_indicator(0)
+            self._ind_off_t = self.t
+
+    def set_indicator(self, side: int):
+        """방향지시등: side=+1 왼쪽, -1 오른쪽, 0 끔. 켠 시각을 기록(R171 6.2.7: 차로 변경 3초 전)."""
+        if side != self.indicator:
+            self.indicator = side
+            self.indicator_t0 = self.t if side else None
 
     def ob_specs_d0(self, k):
         return self.obstacle_specs[k].get("d", 0.0)
@@ -369,4 +466,14 @@ class AutoDriveEnv(_Base):
             self.finished = True
             terminated = True
         truncated = self.steps >= self.max_steps
+        if self.rules.lanes:
+            self._lane_track()
+        # 경로 계획의 차로 변경 요청이 있으면 방향지시등을 켠다(내비=시스템이 켬). 제어기가 직접 켤 수도 있다.
+        if self.rules.lc_requests:
+            req = self.rules.lc_request_at(self._s)
+            if req is not None and abs(self._d - req["to"]) > 0.6 and self.t - self._ind_off_t > 1.0 and not self.indicator:
+                self.set_indicator(int(np.sign(req["to"] - self._d)))
+        mon = getattr(self, "monitor", None)
+        if mon is not None:
+            mon.update(self)
         return obs, float(reward), bool(terminated), bool(truncated), self._info()
