@@ -285,7 +285,8 @@ def main():
         stats = collect(rnd, a.episodes, a.workers, best, 0.1, 0.03, 10_000 + 1000 * rnd, dcas_frac=a.dcas_frac)
         print(f"daily round {rnd}: collected {sum(s['n'] for s in stats)} frames, crashes "
               f"{sum(s['crashed'] for s in stats)} ({time.time() - t:.0f}s)", flush=True)
-        pack_round(rnd)
+        for r in all_rounds():
+            pack_round(r)
         d = RoundData(all_rounds())
         recent = int(d.off[-2]) if len(d.off) >= 2 else 0
         print(f"  dataset {len(d)} frames (new {len(d) - recent})", flush=True)
