@@ -237,6 +237,60 @@ python render_vision_video.py --scenario gangnam_reverse --s0 720 --dur 30 --out
 - 학습 시나리오에는 벤치마크와 같은 지도가 섞여 있어요(신호 시드, 출발점, 차 배치는 무작위). rl-daily와 같은 방식이에요.
 - 다음에 할 것: 출발 상태와 멈춘 뒤 재출발 장면을 늘리고, 시간 정보(프레임 여러 장)를 더 주고, PPO로 미세 조정하기.
 
+### DCAS 01 시험 (UN R171 01 시리즈, OJ L 2025/1899) — `autodrive/dcas.py`
+
+규정의 Annex 4 시험 장면을 시뮬레이터로 옮긴 20개예요. 시나리오마다 근거 문단(`ref`)과 설명(`desc`)이 붙어 있어요.
+`python eval_vision.py --suite dcas --only expert,rl,vision --out results/dcas_benchmark.json --md results/dcas_benchmark.md`
+
+| 묶음 | 시나리오 | 근거 |
+|---|---|---|
+| 차로 유지 | `dcas_lk_curve_85`(R150, 선언 최대 횡가속도 84%), `dcas_lk_curve_over`(R90, 미리 감속), `dcas_lk_scurve`(S자 클로소이드) | Annex4 4.2.5.1.1, 4.2.4.1 / 5.3.7.1 |
+| 차로 변경 | `dcas_lc_request`, `dcas_lc_rear_approach`(뒤 77 km/h), `dcas_lc_beside`, `dcas_lc_same_space`(3차로), `dcas_lc_oncoming_refuse`(편도 1차로), `dcas_lane_end_merge` | Annex4 4.2.5.1.3 / 6.2.2–6.2.9, 6.1.2 |
+| 앞 물체 | `dcas_stationary_70`, `dcas_stationary_curve`, `dcas_slower_lead`, `dcas_lead_brake_4`, `dcas_lead_brake_6`, `dcas_cut_out`, `dcas_cut_in_1`, `dcas_cut_in_2` | Annex4 4.2.5.2.1–4.2.5.2.6 / 5.3.2.2 |
+| 보행자·자전거 | `dcas_ped_standing`, `dcas_ped_crossing`(5 km/h), `dcas_bike_crossing`(15 km/h) | Annex4 4.2.5.2.7, 4.2.5.2.9, 4.2.5.2.10 |
+
+**합격 판정 (모두 만족해야 ✅)**
+- 충돌 없음 (5.3.2.2, 5.3.7.2.5.1), 도로 이탈 없음 (5.3.7.1.1)
+- 차로 유지 횡가속도 ≤ 3.3 m/s² (5.3.7.1.2, 선언 3.0 + 허용 0.3), 0.5 s 이동평균 횡저크 ≤ 5 m/s³ (5.3.7.1.2.1, 6.2.3)
+- 과속 1 s 이하 (도로교통법 17조)
+- 차로 변경이 있으면: 지시등을 MCC(횡 이동) 시작 ≥ 3 s 전에 켜고 끝까지 유지 (6.2.6, 6.2.7), 변경 중 횡가속도 ≤ 3.5 (6.2.3),
+  뒤차가 1 s 차간을 지키려고 3 m/s² 넘게 감속할 필요 없음 (6.2.4.1), 변경 과정 중 감속 ≤ 2 m/s² (6.2.4.3)
+- 요청한 차로 변경을 끝냄 (4.2.5.1.3), 편도 1차로에서 반대 차로 안 씀 (6.2.2)
+
+**자율 완주(autonomous completion)** = 도착 + 충돌·이탈 0 + 개입(실드·전문가 인계·감시자 인계) 0. v2.2와 DCAS 모두 셈해요.
+비전 정책은 실드 없이 달리므로 개입은 늘 0이고, 도착·무사고가 관건이에요.
+
+**결과 (2026-11-03)**
+
+| 정책 | v2.2 총점 | v2.2 자율 완주 | DCAS 총점 | DCAS 합격 | DCAS 자율 완주 | DCAS 충돌 |
+|---|---|---|---|---|---|---|
+| 규칙 기반 expert | 97.96 | 18/18 | 98.29 | 18/20 | 20/20 | 0 (사고 0) |
+| rl-daily 최고 (라이다+특징, 읽기 전용) | 90.65 | 17/18 | 47.15 | 1/20 | 9/20 | 9 (사고 11) |
+| 비전 r4 (`vision_best.pt`) | 74.84 | 14/18 | 65.46 | 5/20 | 13/20 | 7 (사고 7) |
+
+시나리오별 표: [`results/dcas_benchmark.md`](results/dcas_benchmark.md), v2.2 표: [`results/vision_benchmark.md`](results/vision_benchmark.md).
+- expert의 불합격 2개(`dcas_stationary_70`, `dcas_cut_out`)는 피하는 차로 변경 중 지시등을 켠 채 2 m/s² 넘게 감속해서예요(6.2.4.3). 고치지 않고 그대로 적었어요.
+- rl-daily는 DCAS 장면(여러 차로, 끼어들기, 횡단)을 배운 적이 없어 충돌이 많아요(충돌 9, 도로 이탈 포함 사고 11). 지시등도 못 켜요.
+
+### 매일 비전 라운드 (`tools/vision_daily.sh`)
+
+```bash
+cd autonomous_driving
+tools/vision_daily.sh                      # 기본: 28분 제한, 280 에피소드(DCAS 변형 25%), 학습 표본 150만, 푸시 (실제 약 20–24분)
+tools/vision_daily.sh --budget-min 14 --episodes 8 --max-samples 4000 --no-push   # 짧은 시험
+```
+
+1. `weights/vision_best.pt`로 DAgger 모으기(β 0.1, DART 0.03). 25%는 DCAS 시나리오를 상대 위치·속도 ±10~15% 바꾼 판이에요(시험 외우기 방지).
+2. 라운드별 메모리 맵(`round_XX_img.npy`)에 붙이고, 새 라운드 40% + 예전 60%로 1에포크 미세 조정 → `weights/vision_cand.pt`.
+3. v2.2 18개 + DCAS 20개 평가.
+4. 관문(`tools/vision_gate.py`, 모두 만족해야 승격): 안전 합계(v2.2 사고·충돌·신호 위반·시골 위험, DCAS 사고·충돌) 안 나빠짐,
+   자율 완주 수(v2.2+DCAS) 안 줄어듦, DCAS 합격 수 안 줄어듦, 그리고 평균 점수 +0.3 이상 또는 자율 완주 수 증가.
+5. 승격되면 `vision_best.pt` 교체. 점수표 `results/vision_leaderboard.md`, 기록 `results/vision_daily_log.jsonl`을 커밋해 `autodrive/vision-sat`에 푸시해요(가중치는 안 올려요).
+`/workspace/autodrive-rl`(rl-daily, 매일 7:00 KST)은 건드리지 않아요. 같은 시각에 돌리면 CPU를 나눠 써서 느려지니 시간을 비켜 주세요.
+
+**지시등도 정책이 켜요**: 정책 출력이 셋(조향, 가속, 지시등)이에요. 지시등 정답은 선생님(expert)의 레버 상태이고, 정답이 없는 예전 데이터는 손실에서 빼요.
+내비 입력 28번 칸은 "지시등 × 켠 지 얼마나 됐나(3 s면 1)"라서 3초 기다리기를 배울 단서가 돼요.
+
 ## 다음에 해 볼 것
 
 [`docs/발전전략.md`](docs/발전전략.md)의 계획 참고: 매주 자동 개선 사이클, 병렬화, 카메라 인식, CARLA/Donkey/SUMO, 실제 시골 OSM 지역(경기·충청 마을의 `highway=unclassified/track`), 덕 프로젝트(`duck_skills_korean/`)의 한국어 명령 연결.
