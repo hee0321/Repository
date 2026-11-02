@@ -34,3 +34,4 @@
 | 2026-10-31 07:36 | cycle27-rural-mix(r3) | 87.69 | 87.55 | 87.88 | 16/18 | 2 | 0 | 0.9 | 0.0 | 0.236 | 2 | no | 4.2 | rural_wide_traffic: 새로 이탈; rural_wide_traffic: 완주율 하락 1.0→0.77; rural_wide_traffic: 점수 크게 하락 97.62→37.5; 전체 점수 부족 91.23→ |
 | 2026-11-03 07:14 | cycle28-rural-mix(r2) | 90.84 | 87.35 | 95.2 | 17/18 | 1 | 0 | 0.0 | 0.0 | 0.227 | 2 | no | 4.3 | 전체 점수 부족 91.23→90.84 (필요 +0.5); 집계 안전 우위 아님: 도시 87.51→87.35, 전체 91.23→90.84, 시골 95.89→95.2 |
 | 2026-11-03 07:18 | cycle29-rural-mix(r6) | 90.37 | 92.14 | 88.17 | 16/18 | 2 | 0 | 2.6 | 0.0 | 0.268 | 3 | no | 4.2 | gangnam_traffic: 새로 이탈; gangnam_traffic: 시골길 위험 행동 증가; gangnam_traffic: 점수 크게 하락 97.8→45.2; rural_wide_traffic: 새로 이탈; r |
+| 2026-11-03 07:22 | cycle30-rural-mix(r5) | 86.45 | 87.47 | 85.18 | 16/18 | 2 | 0 | 0.0 | 0.0 | 0.23 | 2 | no | 4.2 | rural_wide_traffic: 새로 이탈; rural_wide_traffic: 충돌 증가; rural_wide_traffic: 완주율 하락 1.0→0.514; rural_wide_traffic: 점수 크게 하락 |
