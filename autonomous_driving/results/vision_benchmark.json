@@ -31,7 +31,9 @@
     "slip_s": 0.0,
     "legal_overtake": 0,
     "entering_conflict": 0,
-    "score": 97.83
+    "score": 97.83,
+    "takeovers": 0,
+    "autonomous": true
    },
    "default_2laps": {
     "completion": 1.0,
@@ -63,7 +65,9 @@
     "slip_s": 0.0,
     "legal_overtake": 0,
     "entering_conflict": 0,
-    "score": 98.64
+    "score": 98.64,
+    "takeovers": 0,
+    "autonomous": true
    },
    "hard_2laps": {
     "completion": 1.0,
@@ -95,7 +99,9 @@
     "slip_s": 0.0,
     "legal_overtake": 0,
     "entering_conflict": 0,
-    "score": 97.28
+    "score": 97.28,
+    "takeovers": 0,
+    "autonomous": true
    },
    "hard_wet": {
     "completion": 1.0,
@@ -127,7 +133,9 @@
     "slip_s": 0.0,
     "legal_overtake": 0,
     "entering_conflict": 0,
-    "score": 97.94
+    "score": 97.94,
+    "takeovers": 0,
+    "autonomous": true
    },
    "rules_track": {
     "completion": 1.0,
@@ -159,7 +167,9 @@
     "slip_s": 0.0,
     "legal_overtake": 0,
     "entering_conflict": 0,
-    "score": 98.21
+    "score": 98.21,
+    "takeovers": 0,
+    "autonomous": true
    },
    "obstacles_track": {
     "completion": 1.0,
@@ -191,7 +201,9 @@
     "slip_s": 0.0,
     "legal_overtake": 0,
     "entering_conflict": 0,
-    "score": 95.85
+    "score": 95.85,
+    "takeovers": 0,
+    "autonomous": true
    },
    "gangnam_station": {
     "completion": 1.0,
@@ -223,7 +235,9 @@
     "slip_s": 0.0,
     "legal_overtake": 0,
     "entering_conflict": 0,
-    "score": 97.81
+    "score": 97.81,
+    "takeovers": 0,
+    "autonomous": true
    },
    "gangnam_reverse": {
     "completion": 1.0,
@@ -255,7 +269,9 @@
     "slip_s": 0.0,
     "legal_overtake": 0,
     "entering_conflict": 0,
-    "score": 99.31
+    "score": 99.31,
+    "takeovers": 0,
+    "autonomous": true
    },
    "gangnam_traffic": {
     "completion": 1.0,
@@ -287,7 +303,9 @@
     "slip_s": 0.0,
     "legal_overtake": 0,
     "entering_conflict": 0,
-    "score": 97.24
+    "score": 97.24,
+    "takeovers": 0,
+    "autonomous": true
    },
    "daechi_school_zone": {
     "completion": 1.0,
@@ -319,7 +337,9 @@
     "slip_s": 0.0,
     "legal_overtake": 0,
     "entering_conflict": 0,
-    "score": 98.45
+    "score": 98.45,
+    "takeovers": 0,
+    "autonomous": true
    },
    "rural_day_narrow": {
     "completion": 1.0,
@@ -351,7 +371,9 @@
     "slip_s": 0.0,
     "legal_overtake": 0,
     "entering_conflict": 0,
-    "score": 99.2
+    "score": 99.2,
+    "takeovers": 0,
+    "autonomous": true
    },
    "rural_night_gravel": {
     "completion": 1.0,
@@ -383,7 +405,9 @@
     "slip_s": 0.0,
     "legal_overtake": 0,
     "entering_conflict": 0,
-    "score": 99.16
+    "score": 99.16,
+    "takeovers": 0,
+    "autonomous": true
    },
    "rural_curvy": {
     "completion": 1.0,
@@ -415,7 +439,9 @@
     "slip_s": 0.0,
     "legal_overtake": 0,
     "entering_conflict": 0,
-    "score": 99.17
+    "score": 99.17,
+    "takeovers": 0,
+    "autonomous": true
    },
    "rural_village": {
     "completion": 1.0,
@@ -447,7 +473,9 @@
     "slip_s": 0.0,
     "legal_overtake": 0,
     "entering_conflict": 0,
-    "score": 99.37
+    "score": 99.37,
+    "takeovers": 0,
+    "autonomous": true
    },
    "rural_wide_traffic": {
     "completion": 1.0,
@@ -479,7 +507,9 @@
     "slip_s": 0.0,
     "legal_overtake": 1,
     "entering_conflict": 0,
-    "score": 95.31
+    "score": 95.31,
+    "takeovers": 0,
+    "autonomous": true
    },
    "jeongbae_village": {
     "completion": 1.0,
@@ -511,7 +541,9 @@
     "slip_s": 0.0,
     "legal_overtake": 1,
     "entering_conflict": 0,
-    "score": 98.33
+    "score": 98.33,
+    "takeovers": 0,
+    "autonomous": true
    },
    "jeongbae_night": {
     "completion": 1.0,
@@ -543,7 +575,9 @@
     "slip_s": 0.0,
     "legal_overtake": 0,
     "entering_conflict": 0,
-    "score": 95.11
+    "score": 95.11,
+    "takeovers": 0,
+    "autonomous": true
    },
    "jeongbae_lane": {
     "completion": 1.0,
@@ -575,7 +609,9 @@
     "slip_s": 0.0,
     "legal_overtake": 0,
     "entering_conflict": 0,
-    "score": 99.16
+    "score": 99.16,
+    "takeovers": 0,
+    "autonomous": true
    }
   },
   "total": 97.96,
@@ -588,7 +624,9 @@
    "rural_unsafe": 0,
    "school_speeding_s": 0.0
   },
-  "finished": 18
+  "finished": 18,
+  "autonomous": 18,
+  "n": 18
  },
  "rl": {
   "scenarios": {
@@ -622,7 +660,9 @@
     "slip_s": 0.0,
     "legal_overtake": 0,
     "entering_conflict": 0,
-    "score": 97.83
+    "score": 97.83,
+    "takeovers": 0,
+    "autonomous": true
    },
    "default_2laps": {
     "completion": 1.0,
@@ -654,7 +694,9 @@
     "slip_s": 0.0,
     "legal_overtake": 0,
     "entering_conflict": 0,
-    "score": 98.69
+    "score": 98.69,
+    "takeovers": 0,
+    "autonomous": true
    },
    "hard_2laps": {
     "completion": 1.0,
@@ -686,7 +728,9 @@
     "slip_s": 0.0,
     "legal_overtake": 0,
     "entering_conflict": 0,
-    "score": 97.62
+    "score": 97.62,
+    "takeovers": 0,
+    "autonomous": true
    },
    "hard_wet": {
     "completion": 1.0,
@@ -718,7 +762,9 @@
     "slip_s": 1.7,
     "legal_overtake": 0,
     "entering_conflict": 0,
-    "score": 97.75
+    "score": 97.75,
+    "takeovers": 0,
+    "autonomous": true
    },
    "rules_track": {
     "completion": 1.0,
@@ -750,7 +796,9 @@
     "slip_s": 0.0,
     "legal_overtake": 0,
     "entering_conflict": 0,
-    "score": 97.64
+    "score": 97.64,
+    "takeovers": 0,
+    "autonomous": true
    },
    "obstacles_track": {
     "completion": 0.235,
@@ -783,7 +831,9 @@
     "legal_overtake": 0,
     "entering_conflict": 0,
     "fail_s": 57.1,
-    "score": -6.74
+    "score": -6.74,
+    "takeovers": 0,
+    "autonomous": false
    },
    "gangnam_station": {
     "completion": 1.0,
@@ -815,7 +865,9 @@
     "slip_s": 0.0,
     "legal_overtake": 0,
     "entering_conflict": 0,
-    "score": 98.19
+    "score": 98.19,
+    "takeovers": 0,
+    "autonomous": true
    },
    "gangnam_reverse": {
     "completion": 1.0,
@@ -847,7 +899,9 @@
     "slip_s": 0.0,
     "legal_overtake": 0,
     "entering_conflict": 0,
-    "score": 87.37
+    "score": 87.37,
+    "takeovers": 0,
+    "autonomous": true
    },
    "gangnam_traffic": {
     "completion": 1.0,
@@ -879,7 +933,9 @@
     "slip_s": 0.0,
     "legal_overtake": 0,
     "entering_conflict": 0,
-    "score": 97.8
+    "score": 97.8,
+    "takeovers": 0,
+    "autonomous": true
    },
    "daechi_school_zone": {
     "completion": 1.0,
@@ -911,7 +967,9 @@
     "slip_s": 0.0,
     "legal_overtake": 0,
     "entering_conflict": 0,
-    "score": 98.2
+    "score": 98.2,
+    "takeovers": 0,
+    "autonomous": true
    },
    "rural_day_narrow": {
     "completion": 1.0,
@@ -943,7 +1001,9 @@
     "slip_s": 0.0,
     "legal_overtake": 0,
     "entering_conflict": 0,
-    "score": 99.05
+    "score": 99.05,
+    "takeovers": 0,
+    "autonomous": true
    },
    "rural_night_gravel": {
     "completion": 1.0,
@@ -975,7 +1035,9 @@
     "slip_s": 0.0,
     "legal_overtake": 0,
     "entering_conflict": 0,
-    "score": 99.03
+    "score": 99.03,
+    "takeovers": 0,
+    "autonomous": true
    },
    "rural_curvy": {
     "completion": 1.0,
@@ -1007,7 +1069,9 @@
     "slip_s": 0.0,
     "legal_overtake": 0,
     "entering_conflict": 0,
-    "score": 98.93
+    "score": 98.93,
+    "takeovers": 0,
+    "autonomous": true
    },
    "rural_village": {
     "completion": 1.0,
@@ -1039,7 +1103,9 @@
     "slip_s": 0.0,
     "legal_overtake": 0,
     "entering_conflict": 0,
-    "score": 99.14
+    "score": 99.14,
+    "takeovers": 0,
+    "autonomous": true
    },
    "rural_wide_traffic": {
     "completion": 1.0,
@@ -1071,7 +1137,9 @@
     "slip_s": 0.0,
     "legal_overtake": 1,
     "entering_conflict": 0,
-    "score": 97.62
+    "score": 97.62,
+    "takeovers": 0,
+    "autonomous": true
    },
    "jeongbae_village": {
     "completion": 1.0,
@@ -1103,7 +1171,9 @@
     "slip_s": 0.0,
     "legal_overtake": 0,
     "entering_conflict": 0,
-    "score": 89.1
+    "score": 89.1,
+    "takeovers": 0,
+    "autonomous": true
    },
    "jeongbae_night": {
     "completion": 1.0,
@@ -1135,7 +1205,9 @@
     "slip_s": 0.0,
     "legal_overtake": 0,
     "entering_conflict": 0,
-    "score": 85.36
+    "score": 85.36,
+    "takeovers": 0,
+    "autonomous": true
    },
    "jeongbae_lane": {
     "completion": 1.0,
@@ -1167,7 +1239,9 @@
     "slip_s": 0.0,
     "legal_overtake": 0,
     "entering_conflict": 0,
-    "score": 99.07
+    "score": 99.07,
+    "takeovers": 0,
+    "autonomous": true
    }
   },
   "total": 90.65,
@@ -1180,7 +1254,9 @@
    "rural_unsafe": 2,
    "school_speeding_s": 0.0
   },
-  "finished": 17
+  "finished": 17,
+  "autonomous": 17,
+  "n": 18
  },
  "bench": "v2.2",
  "vision": {
@@ -1215,7 +1291,9 @@
     "slip_s": 0.0,
     "legal_overtake": 0,
     "entering_conflict": 0,
-    "score": 97.07
+    "score": 97.07,
+    "takeovers": 0,
+    "autonomous": true
    },
    "default_2laps": {
     "completion": 1.0,
@@ -1247,7 +1325,9 @@
     "slip_s": 0.0,
     "legal_overtake": 0,
     "entering_conflict": 0,
-    "score": 97.42
+    "score": 97.42,
+    "takeovers": 0,
+    "autonomous": true
    },
    "hard_2laps": {
     "completion": 1.0,
@@ -1279,7 +1359,9 @@
     "slip_s": 0.0,
     "legal_overtake": 0,
     "entering_conflict": 0,
-    "score": 97.32
+    "score": 97.32,
+    "takeovers": 0,
+    "autonomous": true
    },
    "hard_wet": {
     "completion": 1.0,
@@ -1311,7 +1393,9 @@
     "slip_s": 0.05,
     "legal_overtake": 0,
     "entering_conflict": 0,
-    "score": 97.8
+    "score": 97.8,
+    "takeovers": 0,
+    "autonomous": true
    },
    "rules_track": {
     "completion": 1.0,
@@ -1343,7 +1427,9 @@
     "slip_s": 0.0,
     "legal_overtake": 0,
     "entering_conflict": 0,
-    "score": 83.42
+    "score": 83.42,
+    "takeovers": 0,
+    "autonomous": true
    },
    "obstacles_track": {
     "completion": 1.0,
@@ -1375,7 +1461,9 @@
     "slip_s": 0.0,
     "legal_overtake": 0,
     "entering_conflict": 0,
-    "score": 95.5
+    "score": 95.5,
+    "takeovers": 0,
+    "autonomous": true
    },
    "gangnam_station": {
     "completion": 0.018,
@@ -1407,7 +1495,9 @@
     "slip_s": 0.0,
     "legal_overtake": 0,
     "entering_conflict": 0,
-    "score": -26.13
+    "score": -26.13,
+    "takeovers": 0,
+    "autonomous": false
    },
    "gangnam_reverse": {
     "completion": 1.0,
@@ -1439,7 +1529,9 @@
     "slip_s": 0.0,
     "legal_overtake": 0,
     "entering_conflict": 0,
-    "score": 99.14
+    "score": 99.14,
+    "takeovers": 0,
+    "autonomous": true
    },
    "gangnam_traffic": {
     "completion": 0.018,
@@ -1471,7 +1563,9 @@
     "slip_s": 0.0,
     "legal_overtake": 0,
     "entering_conflict": 0,
-    "score": -26.1
+    "score": -26.1,
+    "takeovers": 0,
+    "autonomous": false
    },
    "daechi_school_zone": {
     "completion": 1.0,
@@ -1503,7 +1597,9 @@
     "slip_s": 0.0,
     "legal_overtake": 0,
     "entering_conflict": 0,
-    "score": 97.45
+    "score": 97.45,
+    "takeovers": 0,
+    "autonomous": true
    },
    "rural_day_narrow": {
     "completion": 1.0,
@@ -1535,7 +1631,9 @@
     "slip_s": 0.0,
     "legal_overtake": 0,
     "entering_conflict": 0,
-    "score": 98.64
+    "score": 98.64,
+    "takeovers": 0,
+    "autonomous": true
    },
    "rural_night_gravel": {
     "completion": 1.0,
@@ -1567,7 +1665,9 @@
     "slip_s": 0.0,
     "legal_overtake": 0,
     "entering_conflict": 0,
-    "score": 98.84
+    "score": 98.84,
+    "takeovers": 0,
+    "autonomous": true
    },
    "rural_curvy": {
     "completion": 1.0,
@@ -1599,7 +1699,9 @@
     "slip_s": 0.0,
     "legal_overtake": 0,
     "entering_conflict": 0,
-    "score": 97.61
+    "score": 97.61,
+    "takeovers": 0,
+    "autonomous": true
    },
    "rural_village": {
     "completion": 1.0,
@@ -1631,7 +1733,9 @@
     "slip_s": 0.0,
     "legal_overtake": 0,
     "entering_conflict": 0,
-    "score": 89.0
+    "score": 89.0,
+    "takeovers": 0,
+    "autonomous": true
    },
    "rural_wide_traffic": {
     "completion": 1.0,
@@ -1663,7 +1767,9 @@
     "slip_s": 0.0,
     "legal_overtake": 0,
     "entering_conflict": 0,
-    "score": 97.84
+    "score": 97.84,
+    "takeovers": 0,
+    "autonomous": true
    },
    "jeongbae_village": {
     "completion": 0.17,
@@ -1695,7 +1801,9 @@
     "slip_s": 0.0,
     "legal_overtake": 0,
     "entering_conflict": 0,
-    "score": 23.22
+    "score": 23.22,
+    "takeovers": 0,
+    "autonomous": false
    },
    "jeongbae_night": {
     "completion": 0.968,
@@ -1727,7 +1835,9 @@
     "slip_s": 0.0,
     "legal_overtake": 0,
     "entering_conflict": 0,
-    "score": 41.08
+    "score": 41.08,
+    "takeovers": 0,
+    "autonomous": false
    },
    "jeongbae_lane": {
     "completion": 1.0,
@@ -1759,7 +1869,9 @@
     "slip_s": 0.0,
     "legal_overtake": 0,
     "entering_conflict": 0,
-    "score": 87.97
+    "score": 87.97,
+    "takeovers": 0,
+    "autonomous": true
    }
   },
   "total": 74.84,
@@ -1773,6 +1885,7 @@
    "school_speeding_s": 0.0
   },
   "finished": 14,
-  "policy": "weights/vision_policy_r4.pt (BC r0 + DAgger r1~r4, 338k frames)"
+  "autonomous": 14,
+  "n": 18
  }
 }
