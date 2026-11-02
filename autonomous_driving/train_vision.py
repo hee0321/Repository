@@ -19,9 +19,35 @@ import numpy as np
 DATA = os.environ.get("VISION_DATA", "/workspace/autodrive-vision-data")
 
 
-def train_spec(rng):
-    """학습 시나리오 하나 (도시 실제 도로 45%, 시골 30%, 합성 25%). 실제 도로는 중간 출발·신호 시드·차 배치 무작위."""
+def dcas_spec(rng):
+    """DCAS 01 시나리오 하나를 조금 바꾼 판 (상대 위치·속도 ±10~15%, 진입 속도 ±10%) — 시험 그대로 외우지 않게."""
+    import copy
+    from autodrive.dcas import DCAS01
+    name = str(rng.choice(list(DCAS01)))
+    sc = copy.deepcopy(DCAS01[name])
+    sc["name"] = name
+    sc["v0"] = float(sc.get("v0", 0) * rng.uniform(0.9, 1.05))
+    for o in sc.get("obstacles", []):
+        o["s"] = float(o["s"] * rng.uniform(0.85, 1.15)) if o["s"] > 0 else o["s"]
+        if o.get("v", 0) > 0:
+            o["v"] = float(o["v"] * rng.uniform(0.9, 1.1))
+    return {"dcas": sc}
+
+
+def make_any_env(spec, seed=0):
+    if "dcas" in spec:
+        from autodrive import dcas
+        return dcas.make_env(spec["dcas"], seed=seed)
+    from autodrive.scenarios import make_env
+    return make_env(spec, seed=seed)
+
+
+def train_spec(rng, dcas_frac=0.0):
+    """학습 시나리오 하나 (dcas_frac 만큼 DCAS 01 변형, 나머지: 도시 실제 도로 45%, 시골 30%, 합성 25%).
+    실제 도로는 중간 출발·신호 시드·차 배치 무작위."""
     from autodrive.scenarios import BENCHMARK, RURAL_BENCHMARK, korea_route
+    if dcas_frac > 0 and rng.random() < dcas_frac:
+        return dcas_spec(rng)
     r = rng.random()
     if r < 0.45:
         name = str(rng.choice(["gangnam_station", "gangnam_reverse", "daechi_school_zone", "gangnam_station",
@@ -65,24 +91,23 @@ def train_spec(rng):
 def _worker(job):
     import torch
     torch.set_num_threads(1)
-    from autodrive.scenarios import make_env
     from autodrive.vision.drive import drive_episode
     from autodrive.vision.policy import load_policy
     rnd, i, spec, pol, beta, dart, seed = job
     policy = load_policy(pol) if pol else None
-    env = make_env(spec, seed=seed)
+    env = make_any_env(spec, seed=seed)
     res, data, _ = drive_episode(env, policy, seed=seed, beta=beta, dart=dart, collect=True,
                                  rng=np.random.default_rng(seed), cam_noise=float(np.random.default_rng(seed).uniform(0, 6)))
     p = os.path.join(DATA, f"r{rnd:02d}_{i:04d}.npz")
     np.savez(p, **data)
     return dict(i=i, n=len(data["act"]), crashed=res["crashed"], completion=res["completion"],
-                red=res["red_runs"] + res.get("right_turn_no_stop", 0), spec=spec.get("korea") or spec.get("kind"))
+                red=res["red_runs"] + res.get("right_turn_no_stop", 0), spec=spec.get("korea") or spec.get("kind") or ("dcas:" + spec["dcas"]["name"] if "dcas" in spec else "?"))
 
 
-def collect(rnd, n_ep, workers, pol, beta, dart, seed0):
+def collect(rnd, n_ep, workers, pol, beta, dart, seed0, dcas_frac=0.0):
     from multiprocessing import get_context
     rng = np.random.default_rng(1000 + rnd)
-    jobs = [(rnd, i, train_spec(rng), pol, beta, dart, seed0 + i) for i in range(n_ep)]
+    jobs = [(rnd, i, train_spec(rng, dcas_frac), pol, beta, dart, seed0 + i) for i in range(n_ep)]
     out = []
     with get_context("spawn").Pool(workers, maxtasksperchild=8) as pool:
         for k, r in enumerate(pool.imap_unordered(_worker, jobs)):
@@ -92,33 +117,91 @@ def collect(rnd, n_ep, workers, pol, beta, dart, seed0):
     return out
 
 
-def build_memmap(rounds_upto):
-    files = sorted(f for f in glob.glob(os.path.join(DATA, "r*_*.npz")) if int(os.path.basename(f)[1:3]) <= rounds_upto)
-    N = 0
-    meta = []
+def pack_round(rnd):
+    """라운드 rnd 의 에피소드 npz 들 → round_XX_img.npy(메모리 맵) + round_XX_meta.npz (nav 는 NAV_DIM 으로 0 채움).
+    한 번 묶으면 에피소드 파일은 지운다(디스크 절약). 이미 묶였으면 그대로."""
+    from autodrive.vision.nav import NAV_DIM
+    ip = os.path.join(DATA, f"round_{rnd:02d}_img.npy")
+    mp = os.path.join(DATA, f"round_{rnd:02d}_meta.npz")
+    files = sorted(glob.glob(os.path.join(DATA, f"r{rnd:02d}_*.npz")))
+    if os.path.exists(mp) and not files:
+        return
+    if not files:
+        return
+    ns = []
     for f in files:
         with np.load(f) as d:
-            n = len(d["act"])
-        meta.append((f, n))
-        N += n
-    img = np.lib.format.open_memmap(os.path.join(DATA, "img.npy"), mode="w+", dtype=np.uint8, shape=(N, 4, 72, 128))
-    nav = np.zeros((N, 28), np.float32)
+            ns.append(len(d["act"]))
+    N = sum(ns)
+    img = np.lib.format.open_memmap(ip + ".tmp.npy", mode="w+", dtype=np.uint8, shape=(N, 4, 72, 128))
+    nav = np.zeros((N, NAV_DIM), np.float32)
     act = np.zeros((N, 2), np.float32)
     w = np.zeros(N, np.float32)
     o = 0
-    for f, n in meta:
+    for f, n in zip(files, ns):
         with np.load(f) as d:
             img[o:o + n] = d["img"]
-            nav[o:o + n] = d["nav"]
+            nv = d["nav"]
+            nav[o:o + n, :nv.shape[1]] = nv
             act[o:o + n] = d["act"]
             w[o:o + n] = d["w"]
         o += n
     img.flush()
     del img
-    return np.load(os.path.join(DATA, "img.npy"), mmap_mode="r"), nav, act, w
+    os.replace(ip + ".tmp.npy", ip)
+    np.savez(mp, nav=nav, act=act, w=w)
+    for f in files:
+        os.remove(f)
 
 
-def train(img, nav, act, w, init=None, epochs=4, bs=256, lr=1e-3, threads=8, log=print):
+class RoundData:
+    """라운드별 메모리 맵 묶음. img[idx] (idx 오름차순) → (B,4,72,128) uint8."""
+
+    def __init__(self, rounds):
+        self.imgs, navs, acts, ws, self.off = [], [], [], [], [0]
+        for r in rounds:
+            mp = os.path.join(DATA, f"round_{r:02d}_meta.npz")
+            if not os.path.exists(mp):
+                continue
+            self.imgs.append(np.load(os.path.join(DATA, f"round_{r:02d}_img.npy"), mmap_mode="r"))
+            with np.load(mp) as d:
+                navs.append(d["nav"]); acts.append(d["act"]); ws.append(d["w"])
+            self.off.append(self.off[-1] + len(acts[-1]))
+        self.nav, self.act, self.w = np.concatenate(navs), np.concatenate(acts), np.concatenate(ws)
+        self.off = np.array(self.off)
+
+    def __len__(self):
+        return len(self.act)
+
+    def __getitem__(self, idx):
+        idx = np.asarray(idx)
+        out = np.empty((len(idx), 4, 72, 128), np.uint8)
+        r = np.searchsorted(self.off, idx, side="right") - 1
+        for k in np.unique(r):
+            m = r == k
+            out[m] = self.imgs[k][idx[m] - self.off[k]]
+        return out
+
+
+def all_rounds():
+    rs = set()
+    for f in glob.glob(os.path.join(DATA, "round_*_meta.npz")) + glob.glob(os.path.join(DATA, "r*_*.npz")):
+        b = os.path.basename(f)
+        rs.add(int(b[6:8]) if b.startswith("round_") else int(b[1:3]))
+    return sorted(rs)
+
+
+def build_memmap(rounds_upto):
+    for r in all_rounds():
+        if r <= rounds_upto:
+            pack_round(r)
+    d = RoundData([r for r in all_rounds() if r <= rounds_upto])
+    return d, d.nav, d.act, d.w
+
+
+def train(img, nav, act, w, init=None, epochs=4, bs=256, lr=1e-3, threads=8, log=print, max_samples=None,
+          recent_from=None, recent_frac=0.4):
+    """max_samples: 에포크마다 이만큼만 뽑기(매일 라운드 시간 제한). recent_from 이후 인덱스(새 라운드)에서 recent_frac."""
     import torch
     from autodrive.vision.policy import VisionPolicy
     torch.set_num_threads(threads)
@@ -132,15 +215,23 @@ def train(img, nav, act, w, init=None, epochs=4, bs=256, lr=1e-3, threads=8, log
     v = nav[:, 0] * 20.0
     w = w * (1.0 + 3.0 * ((v < 1.0) & (act[:, 1] > 0.2)) + 1.0 * ((v < 1.0) & (act[:, 1] < -0.2))
              + 1.0 * ((v > 5.0) & (act[:, 1] < -0.5)))
-    steps = epochs * (N // bs)
+    steps = epochs * (min(N, max_samples or N) // bs)
     sched = torch.optim.lr_scheduler.OneCycleLR(opt, max_lr=lr, total_steps=max(steps, 1), pct_start=0.15)
     rng = np.random.default_rng(0)
     t0 = time.time()
     k = 0
     for ep in range(epochs):
         perm = rng.permutation(N)
+        if max_samples and max_samples < N:
+            if recent_from is not None and recent_from < N:
+                nr = min(int(max_samples * recent_frac), N - recent_from)
+                perm = np.r_[rng.choice(np.arange(recent_from, N), nr, replace=False),
+                             rng.choice(recent_from, max_samples - nr, replace=False)]
+                perm = rng.permutation(perm)
+            else:
+                perm = perm[:max_samples]
         tot = 0.0
-        for b in range(N // bs):
+        for b in range(len(perm) // bs):
             idx = np.sort(perm[b * bs:(b + 1) * bs])
             x = torch.from_numpy(np.ascontiguousarray(img[idx]))
             # 증강: 밝기·대비 흔들기 (uint8 그대로 넣고 float 변환 뒤에)
@@ -161,7 +252,7 @@ def train(img, nav, act, w, init=None, epochs=4, bs=256, lr=1e-3, threads=8, log
             sched.step()
             tot += float(loss.detach())
             k += 1
-        log(f"  epoch {ep + 1}/{epochs} loss {tot / max(N // bs, 1):.4f} ({time.time() - t0:.0f}s)")
+        log(f"  epoch {ep + 1}/{epochs} loss {tot / max(len(perm) // bs, 1):.4f} ({time.time() - t0:.0f}s)")
     return m
 
 
@@ -173,6 +264,10 @@ def main():
     ap.add_argument("--workers", type=int, default=4)
     ap.add_argument("--epochs", type=int, default=4)
     ap.add_argument("--polish", type=int, default=-1, help="모으지 않고 이 라운드까지 데이터로 다시 학습만 (이어서)")
+    ap.add_argument("--daily", action="store_true",
+                    help="매일 라운드 1개: weights/vision_best.pt 로 DAgger 모으기(DCAS 섞기) → 후보 weights/vision_cand.pt")
+    ap.add_argument("--dcas-frac", type=float, default=0.25)
+    ap.add_argument("--max-samples", type=int, default=None)
     a = ap.parse_args()
     import torch
     os.makedirs(DATA, exist_ok=True)
@@ -180,6 +275,30 @@ def main():
     os.makedirs(wdir, exist_ok=True)
     pol = os.path.join(wdir, "vision_policy.pt")
     logp = os.path.join(DATA, "train_log.jsonl")
+    if a.daily:
+        best = os.path.join(wdir, "vision_best.pt")
+        if not os.path.exists(best):
+            import shutil
+            shutil.copy(pol, best)
+        rnd = (max(all_rounds()) + 1) if all_rounds() else 0
+        t = time.time()
+        stats = collect(rnd, a.episodes, a.workers, best, 0.1, 0.03, 10_000 + 1000 * rnd, dcas_frac=a.dcas_frac)
+        print(f"daily round {rnd}: collected {sum(s['n'] for s in stats)} frames, crashes "
+              f"{sum(s['crashed'] for s in stats)} ({time.time() - t:.0f}s)", flush=True)
+        pack_round(rnd)
+        d = RoundData(all_rounds())
+        recent = int(d.off[-2]) if len(d.off) >= 2 else 0
+        print(f"  dataset {len(d)} frames (new {len(d) - recent})", flush=True)
+        m = train(d, d.nav, d.act, d.w, init=best, epochs=a.epochs, lr=3e-4,
+                  max_samples=a.max_samples, recent_from=recent)
+        torch.save(m.state_dict(), os.path.join(wdir, "vision_cand.pt"))
+        with open(logp, "a") as f:
+            f.write(json.dumps(dict(round=rnd, daily=True, frames=len(d), new=len(d) - recent, episodes=a.episodes,
+                                    drive_crashes=sum(s["crashed"] for s in stats),
+                                    dcas_episodes=sum(str(s["spec"]).startswith("dcas") for s in stats),
+                                    time_s=round(time.time() - t)), ensure_ascii=False) + "\n")
+        print(json.dumps(dict(round=rnd, cand="weights/vision_cand.pt", time_s=round(time.time() - t))), flush=True)
+        return
     if a.polish >= 0:
         img, nav, act, w = build_memmap(a.polish)
         print(f"polish: dataset {len(act)} frames", flush=True)

@@ -37,8 +37,13 @@ def drive_episode(env, policy=None, seed=0, beta=0.0, dart=0.0, collect=False, r
     done = False
     step = 0
     use_expert = policy is None
+    # expert(선생님)는 정답 표시가 필요할 때만 돌린다. 평가(policy 만 운전, collect=False)에서는 돌리지 않아
+    # 선생님이 방향지시등을 켜 주는 일 같은 '도움'이 없게 한다.
+    need_expert = collect or policy is None or beta > 0
+    a_exp = np.zeros(2, np.float32)
     while not done:
-        a_exp = expert.act(obs)
+        if need_expert:
+            a_exp = expert.act(obs)
         if step % CONTROL_EVERY == 0:
             frame = cam.render(noise=cam_noise)
             hist.append(frame)

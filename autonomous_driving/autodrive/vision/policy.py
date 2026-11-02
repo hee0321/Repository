@@ -38,6 +38,10 @@ def stack_frames(cur_rgb: np.ndarray, prev_rgb: np.ndarray | None) -> np.ndarray
 
 def load_policy(path):
     m = VisionPolicy()
-    m.load_state_dict(torch.load(path, map_location="cpu"))
+    sd = torch.load(path, map_location="cpu")
+    w = sd.get("nav.0.weight")
+    if w is not None and w.shape[1] < NAV_DIM:   # 예전(28개) 가중치: 새 입력 칸은 0 으로 이어 붙임 (처음엔 무시)
+        sd["nav.0.weight"] = torch.cat([w, torch.zeros(w.shape[0], NAV_DIM - w.shape[1])], dim=1)
+    m.load_state_dict(sd)
     m.eval()
     return m

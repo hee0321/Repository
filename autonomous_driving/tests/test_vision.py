@@ -81,5 +81,5 @@ def test_policy_forward():
     from autodrive.vision.policy import VisionPolicy, stack_frames
     m = VisionPolicy().eval()
     x = stack_frames(np.zeros((72, 128, 3), np.uint8), None)
-    out = m(torch.from_numpy(x[None]), torch.zeros(1, 28))
+    out = m(torch.from_numpy(x[None]), torch.zeros(1, 30))
     assert out.shape == (1, 2) and float(out.abs().max()) <= 1.0

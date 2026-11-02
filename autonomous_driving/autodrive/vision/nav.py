@@ -6,6 +6,7 @@
   - 앞 굽이 곡률(15·30·60 m 안 최대), 남은 거리
   - 제한속도(지금, 앞 구간 미리 보기), 어린이보호구역(지금, 시작까지 거리)  ← 한국 내비 안내와 같음
   - 다음 신호 교차로까지 거리(지도), 그 교차로에서 우회전인지  ← 신호 '색'은 주지 않음(카메라로 봐야 함)
+  - 방향지시등(경로 계획의 차로 변경 요청), 같은 방향 차로 수
   - 도로 종류: 시골길·좁은 길·중앙선 양방향·비포장 앞·폭·앞지르기 허용(중앙선 점선), 밤 여부, 노면 마찰 추정
 주지 않는 것: 차선 안 내 좌우 위치(카메라로), 다른 차·보행자 목록, 신호 색, 라이다.
 """
@@ -14,7 +15,7 @@ from __future__ import annotations
 import numpy as np
 
 AHEAD = (4.0, 8.0, 15.0, 25.0, 40.0)
-NAV_DIM = 28
+NAV_DIM = 30   # 28 + (방향지시등 상태, 같은 방향 차로 수/3) — DCAS 01 여러 차로
 
 
 class GPS:
@@ -93,4 +94,7 @@ class Nav:
         f[25] = min(self.d_stop, 50.0) / 50.0
         f[26] = min(max(env.goal_m - env.progress, 0.0), 200.0) / 200.0
         f[27] = float(all(ru.passing_ok_at(s + k) for k in range(0, 121, 10)))
+        # 경로 계획(내비)이 켠 방향지시등 = 차로 변경 요청 (+1 왼쪽/-1 오른쪽). 차선 안 내 위치는 여전히 카메라로.
+        f[28] = float(getattr(env, "indicator", 0))
+        f[29] = (len(ru.lanes) if getattr(ru, "lanes", None) else 1) / 3.0
         return f

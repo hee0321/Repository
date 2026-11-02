@@ -151,6 +151,13 @@ class FrontCamera:
         dash = (np.mod(s, 8.0) < 3.0)
         out[cen & twoway] = YELLOW
         out[cen & ~twoway & dash] = WHITE
+        # 같은 방향 여러 차로(DCAS): 차로 사이 흰 점선
+        if getattr(rules, "lanes", None) and len(rules.lanes) > 1:
+            ls = sorted(rules.lanes)
+            for a_, b_ in zip(ls[:-1], ls[1:]):
+                m_ = (a_ + b_) / 2
+                ln = on & (np.abs(d - m_) < 0.12 + 0.004 * dist) & dash
+                out[ln] = WHITE
         # 정지선(내 차로 쪽) + 횡단보도
         for sg in rules.signals:
             ds_ = s - sg.s
