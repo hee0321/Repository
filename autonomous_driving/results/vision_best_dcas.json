@@ -217,7 +217,7 @@
     "lcp_lead_s": [
      null
     ],
-    "lcp_decel_max": 0.96,
+    "lcp_decel_max": 0.95,
     "rear_req_decel": 0.0,
     "rear_gap_short_steps": 0,
     "min_thw_s": null,
@@ -508,10 +508,10 @@
     "max_brake": 3.22,
     "emergency_brake": true,
     "lane_changes": 2,
-    "lc_unsignalled": 2,
+    "lc_unsignalled": 3,
     "lcp_lead_s": [
      null,
-     3.85,
+     null,
      null
     ],
     "lcp_decel_max": 3.22,
@@ -1137,6 +1137,5 @@
    }
   }
  },
- "bench": "dcas01",
- "weights": "vision_policy_r4"
+ "bench": "dcas01"
 }

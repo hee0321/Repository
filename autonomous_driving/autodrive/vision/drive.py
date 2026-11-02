@@ -55,12 +55,14 @@ def drive_episode(env, policy=None, seed=0, beta=0.0, dart=0.0, collect=False, r
             if collect:
                 imgs.append(x_img)
                 navs.append(x_nav)
-                acts.append(a_exp.copy())
+                acts.append(np.r_[a_exp[:2], float(getattr(env, "indicator", 0))].astype(np.float32))  # 지시등 = 선생님 레버
                 # 안전 중요 순간 가중: 세게 감속, 정지선·장애물 가까이, 큰 조향
                 w = 1.0 + 2.0 * float(a_exp[1] < -0.3) + 1.0 * float(abs(a_exp[0]) > 0.3)
                 ttc = env.ttc()
                 if ttc < 4 or env.stop_distance() < 30:
                     w += 2.0
+                if getattr(env, "indicator", 0) or getattr(env, "_lcm_on", False):
+                    w += 2.0          # 차로 변경·지시등 장면 (드묾)
                 wts.append(w)
             if policy is not None:
                 use_expert = rng.random() < beta
@@ -68,7 +70,17 @@ def drive_episode(env, policy=None, seed=0, beta=0.0, dart=0.0, collect=False, r
                 a = a_exp.copy()
             else:
                 with torch.no_grad():
-                    a = policy(torch.from_numpy(x_img[None]), torch.from_numpy(x_nav[None])).numpy()[0]
+                    out = policy(torch.from_numpy(x_img[None]), torch.from_numpy(x_nav[None])).numpy()[0]
+                a = out[:2]
+                if len(out) > 2 and not need_expert and hasattr(env, "set_indicator"):
+                    # 정책이 레버를 직접 켜고 끈다 (평가 때). 히스테리시스: ±0.5 넘으면 켜고 |·|<0.2 면 끔.
+                    ind = out[2]
+                    if ind > 0.5 and env.indicator != 1:
+                        env.set_indicator(1)
+                    elif ind < -0.5 and env.indicator != -1:
+                        env.set_indicator(-1)
+                    elif abs(ind) < 0.2 and env.indicator != 0:
+                        env.set_indicator(0)
                 if smooth > 0:
                     a = (1 - smooth) * a + smooth * a_exec
             if dart > 0:

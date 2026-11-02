@@ -82,4 +82,28 @@ def test_policy_forward():
     m = VisionPolicy().eval()
     x = stack_frames(np.zeros((72, 128, 3), np.uint8), None)
     out = m(torch.from_numpy(x[None]), torch.zeros(1, 30))
-    assert out.shape == (1, 2) and float(out.abs().max()) <= 1.0
+    assert out.shape == (1, 3) and float(out.abs().max()) <= 1.0
+
+
+def test_old_two_output_weights_load_and_policy_drives_indicator():
+    """예전(출력 2·내비 28) 가중치를 받아도 돌고, 정책 셋째 출력이 지시등을 켠다."""
+    import torch
+    from autodrive import dcas
+    from autodrive.vision.drive import drive_episode
+    from autodrive.vision.policy import VisionPolicy, load_policy
+    import tempfile, os
+    m = VisionPolicy()
+    sd = m.state_dict()
+    sd["head.4.weight"], sd["head.4.bias"] = sd["head.4.weight"][:2], sd["head.4.bias"][:2]
+    sd["nav.0.weight"] = sd["nav.0.weight"][:, :28]
+    p = os.path.join(tempfile.mkdtemp(), "old.pt")
+    torch.save(sd, p)
+    pol = load_policy(p)
+    assert float(pol.head[4].weight[2].abs().sum()) == 0.0
+
+    class Left(torch.nn.Module):   # 늘 직진·약한 가속·왼쪽 지시등
+        def forward(self, img, nav):
+            return torch.tensor([[0.0, 0.2, 1.0]])
+    env = dcas.make_env("dcas_lk_scurve", max_steps=60)
+    drive_episode(env, Left(), seed=0)
+    assert env.indicator == 1

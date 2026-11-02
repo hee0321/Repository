@@ -135,7 +135,7 @@ def pack_round(rnd):
     N = sum(ns)
     img = np.lib.format.open_memmap(ip + ".tmp.npy", mode="w+", dtype=np.uint8, shape=(N, 4, 72, 128))
     nav = np.zeros((N, NAV_DIM), np.float32)
-    act = np.zeros((N, 2), np.float32)
+    act = np.full((N, 3), np.nan, np.float32)
     w = np.zeros(N, np.float32)
     o = 0
     for f, n in zip(files, ns):
@@ -143,7 +143,7 @@ def pack_round(rnd):
             img[o:o + n] = d["img"]
             nv = d["nav"]
             nav[o:o + n, :nv.shape[1]] = nv
-            act[o:o + n] = d["act"]
+            act[o:o + n, :d["act"].shape[1]] = d["act"]
             w[o:o + n] = d["w"]
         o += n
     img.flush()
@@ -165,7 +165,11 @@ class RoundData:
                 continue
             self.imgs.append(np.load(os.path.join(DATA, f"round_{r:02d}_img.npy"), mmap_mode="r"))
             with np.load(mp) as d:
-                navs.append(d["nav"]); acts.append(d["act"]); ws.append(d["w"])
+                navs.append(d["nav"]); ws.append(d["w"])
+                ac = d["act"]
+                if ac.shape[1] < 3:   # 지시등 정답이 없는 예전 데이터: NaN → 손실에서 뺌
+                    ac = np.concatenate([ac, np.full((len(ac), 3 - ac.shape[1]), np.nan, np.float32)], 1)
+                acts.append(ac)
             self.off.append(self.off[-1] + len(acts[-1]))
         self.nav, self.act, self.w = np.concatenate(navs), np.concatenate(acts), np.concatenate(ws)
         self.off = np.array(self.off)
@@ -242,7 +246,10 @@ def train(img, nav, act, w, init=None, epochs=4, bs=256, lr=1e-3, threads=8, log
             y = torch.from_numpy(act[idx])
             ww = torch.from_numpy(w[idx])
             pred = m(x, nv)
-            loss = ((pred - y) ** 2 * torch.tensor([1.5, 1.0])).sum(1)
+            y3 = y[:, 2] if y.shape[1] > 2 else torch.full((len(y),), float("nan"))
+            has = ~torch.isnan(y3)
+            loss = ((pred[:, :2] - y[:, :2]) ** 2 * torch.tensor([1.5, 1.0])).sum(1)
+            loss = loss + 0.5 * torch.where(has, (pred[:, 2] - torch.nan_to_num(y3)) ** 2, torch.zeros_like(y3))
             loss = (loss * ww).sum() / ww.sum()
             opt.zero_grad()
             loss.backward()

@@ -628,6 +628,5 @@
   "autonomous": 14,
   "n": 18
  },
- "bench": "v2.2",
- "weights": "vision_policy_r4"
+ "bench": "v2.2"
 }

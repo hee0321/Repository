@@ -95,6 +95,8 @@ class Nav:
         f[26] = min(max(env.goal_m - env.progress, 0.0), 200.0) / 200.0
         f[27] = float(all(ru.passing_ok_at(s + k) for k in range(0, 121, 10)))
         # 경로 계획(내비)이 켠 방향지시등 = 차로 변경 요청 (+1 왼쪽/-1 오른쪽). 차선 안 내 위치는 여전히 카메라로.
-        f[28] = float(getattr(env, "indicator", 0))
+        ind = float(getattr(env, "indicator", 0))   # 지시등 ×(켠 지 3 s 되면 1, 막 켜면 0.3) — 3 s 기다리기 단서
+        t0 = getattr(env, "indicator_t0", None)
+        f[28] = ind * (0.3 + 0.7 * min(1.0, (env.t - t0) / 3.0)) if ind and t0 is not None else ind
         f[29] = (len(ru.lanes) if getattr(ru, "lanes", None) else 1) / 3.0
         return f

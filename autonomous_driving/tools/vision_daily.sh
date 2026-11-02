@@ -2,10 +2,10 @@
 # 비전 정책 매일 DAgger 라운드 1회 (~25-30분 제한): 모으기(DCAS 25% 섞기) → 1에포크 학습 → v2.2 + DCAS 평가
 # → 관문(안전·자율 완주·점수) → 승격 시 weights/vision_best.pt 교체 → 점수표 커밋·푸시(autodrive/vision-sat).
 #
-# 사용: tools/vision_daily.sh [--budget-min 28] [--episodes 80] [--max-samples 200000] [--workers 6] [--no-push]
+# 사용: tools/vision_daily.sh [--budget-min 28] [--episodes 200] [--max-samples 900000] [--workers 6] [--no-push]
 #   짧은 시험: tools/vision_daily.sh --budget-min 12 --episodes 8 --max-samples 4000 --no-push
 set -euo pipefail
-BUDGET=28; EP=80; MAXS=200000; W=6; PUSH=1; BRANCH=autodrive/vision-sat
+BUDGET=28; EP=200; MAXS=900000; W=6; PUSH=1; BRANCH=autodrive/vision-sat
 while [ $# -gt 0 ]; do case "$1" in
   --budget-min) BUDGET=$2; shift 2;; --episodes) EP=$2; shift 2;; --max-samples) MAXS=$2; shift 2;;
   --workers) W=$2; shift 2;; --no-push) PUSH=0; shift;; *) echo "unknown arg $1"; exit 2;; esac; done
@@ -29,8 +29,8 @@ if [ ! -f results/vision_best_v22.json ] || [ ! -f results/vision_best_dcas.json
   cp "$TMP/b22.json" results/vision_best_v22.json; cp "$TMP/bdc.json" results/vision_best_dcas.json
 fi
 
-# 1) 모으기 + 학습 (남은 시간의 55% 까지)
-TT=$(( $(left) * 55 / 100 )); [ "$TT" -gt 60 ] || { log "시간 부족"; exit 5; }
+# 1) 모으기 + 학습 (남은 시간의 75% 까지)
+TT=$(( $(left) * 75 / 100 )); [ "$TT" -gt 60 ] || { log "시간 부족"; exit 5; }
 log "1) DAgger 모으기 $EP 에피소드 + 학습 (최대 ${TT}s)"
 rm -f weights/vision_cand.pt
 timeout "$TT" $PY train_vision.py --daily --episodes "$EP" --workers "$W" --epochs 1 --max-samples "$MAXS" \
