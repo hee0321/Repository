@@ -48,3 +48,4 @@
 | 2026-11-04 07:52 | cycle41-rural-mix(r4) | 88.78 | 84.95 | 93.57 | 17/18 | 1 | 2 | 0.0 | 0.0 | 0.241 | 3 | no | 2.8 | rules_track: 신호·우회전 위반 증가 0→1; rules_track: 점수 크게 하락 97.64→83.69; gangnam_reverse: 신호·우회전 위반 증가 0→1; gangnam_reverse: 점수 |
 | 2026-11-05 07:16 | cycle42-rural-mix(r5) | 87.67 | 87.48 | 87.91 | 16/18 | 2 | 0 | 0.0 | 0.0 | 0.224 | 2 | no | 11.0 | rural_wide_traffic: 새로 이탈; rural_wide_traffic: 충돌 증가; rural_wide_traffic: 완주율 하락 1.0→0.717; rural_wide_traffic: 점수 크게 하락 |
 | 2026-11-05 07:20 | cycle43-rural-mix(r2) | 91.06 | 87.52 | 95.48 | 17/18 | 1 | 0 | 0.0 | 0.0 | 0.231 | 2 | no | 4.3 | 전체 점수 부족 91.23→91.06 (필요 +0.5); 집계 안전 우위 아님: 전체 91.23→91.06, 시골 95.89→95.48 |
+| 2026-11-05 07:25 | cycle44-rural-mix(r2) | 87.55 | 87.45 | 87.67 | 16/18 | 2 | 0 | 0.7 | 0.0 | 0.241 | 2 | no | 4.2 | rural_wide_traffic: 새로 이탈; rural_wide_traffic: 충돌 증가; rural_wide_traffic: 완주율 하락 1.0→0.725; rural_wide_traffic: 점수 크게 하락 |
