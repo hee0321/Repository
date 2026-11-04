@@ -274,6 +274,7 @@ def main():
                     help="매일 라운드 1개: weights/vision_best.pt 로 DAgger 모으기(DCAS 섞기) → 후보 weights/vision_cand.pt")
     ap.add_argument("--dcas-frac", type=float, default=0.25)
     ap.add_argument("--max-samples", type=int, default=None)
+    ap.add_argument("--lr", type=float, default=3e-4, help="--daily 미세 조정 학습률 (최고 학습률, OneCycle)")
     a = ap.parse_args()
     import torch
     os.makedirs(DATA, exist_ok=True)
@@ -296,7 +297,7 @@ def main():
         d = RoundData(all_rounds())
         recent = int(d.off[-2]) if len(d.off) >= 2 else 0
         print(f"  dataset {len(d)} frames (new {len(d) - recent})", flush=True)
-        m = train(d, d.nav, d.act, d.w, init=best, epochs=a.epochs, lr=3e-4,
+        m = train(d, d.nav, d.act, d.w, init=best, epochs=a.epochs, lr=a.lr,
                   max_samples=a.max_samples, recent_from=recent)
         torch.save(m.state_dict(), os.path.join(wdir, "vision_cand.pt"))
         with open(logp, "a") as f:
