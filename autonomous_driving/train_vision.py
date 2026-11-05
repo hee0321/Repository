@@ -124,10 +124,10 @@ def pack_round(rnd):
     ip = os.path.join(DATA, f"round_{rnd:02d}_img.npy")
     mp = os.path.join(DATA, f"round_{rnd:02d}_meta.npz")
     files = sorted(glob.glob(os.path.join(DATA, f"r{rnd:02d}_*.npz")))
-    if os.path.exists(mp) and not files:
-        return
     if not files:
         return
+    if os.path.exists(mp) or os.path.exists(ip):
+        raise FileExistsError(f"round {rnd} 파일이 이미 있음 — 덮어쓰지 않음 ({ip}). 새 번호로 모으세요.")
     ns = []
     for f in files:
         with np.load(f) as d:
@@ -188,11 +188,65 @@ class RoundData:
 
 
 def all_rounds():
+    import re
     rs = set()
     for f in glob.glob(os.path.join(DATA, "round_*_meta.npz")) + glob.glob(os.path.join(DATA, "r*_*.npz")):
-        b = os.path.basename(f)
-        rs.add(int(b[6:8]) if b.startswith("round_") else int(b[1:3]))
+        m = re.match(r"(?:round_|r)(\d+)_", os.path.basename(f))
+        if m:
+            rs.add(int(m.group(1)))
     return sorted(rs)
+
+
+# ---- 데이터 보존: 라운드 번호는 절대 다시 쓰지 않고, 만든 라운드는 기록(manifest)에 남긴다 ----
+REPO_MANIFEST = os.path.join(os.path.dirname(os.path.abspath(__file__)), "results", "vision_data_manifest.jsonl")
+DAILY_LOG = os.path.join(os.path.dirname(os.path.abspath(__file__)), "results", "vision_daily_log.jsonl")
+
+
+def _manifest_rows(path):
+    if not os.path.exists(path):
+        return []
+    return [json.loads(x) for x in open(path) if x.strip()]
+
+
+def _logged_rounds():
+    """저장소에 남은 기록(매일 점수 기록 + manifest)이 아는 라운드 번호 전부."""
+    rs = {r["round"] for r in _manifest_rows(REPO_MANIFEST)}
+    rs |= {r["round"] for r in _manifest_rows(DAILY_LOG)}
+    rs |= {r["round"] for r in _manifest_rows(os.path.join(DATA, "MANIFEST.jsonl"))}
+    return rs
+
+
+def next_round_id():
+    """디스크·manifest·매일 기록 중 가장 큰 번호 + 1 (데이터가 사라져도 번호를 0부터 다시 쓰지 않음)."""
+    rs = set(all_rounds()) | _logged_rounds()
+    return (max(rs) + 1) if rs else 0
+
+
+def check_data():
+    """manifest 에 있는데 디스크에 없는 라운드를 알린다. 반환: (있는 것, 없는 것)."""
+    disk = set(all_rounds())
+    known = {r["round"]: r for r in _manifest_rows(REPO_MANIFEST) if r.get("data_dir") == DATA and r.get("status", "ok") == "ok"}
+    missing = sorted(k for k in known if k not in disk)
+    if missing:
+        print(f"경고: manifest 에 있는 라운드 {missing} 가 {DATA} 에 없음 (사라짐/옮겨짐). 번호는 다시 쓰지 않음.", flush=True)
+    return sorted(disk), missing
+
+
+def record_round(rnd, note=""):
+    """라운드 파일 크기·프레임·시각을 데이터 폴더와 저장소 manifest 둘 다에 남김."""
+    import datetime as _dt
+    ip = os.path.join(DATA, f"round_{rnd:02d}_img.npy")
+    mp = os.path.join(DATA, f"round_{rnd:02d}_meta.npz")
+    with np.load(mp) as d:
+        n = int(len(d["act"]))
+    row = dict(round=rnd, data_dir=DATA, img=os.path.basename(ip), frames=n, img_bytes=os.path.getsize(ip),
+               created=_dt.datetime.now().strftime("%Y-%m-%d %H:%M KST"), note=note)
+    for path in (os.path.join(DATA, "MANIFEST.jsonl"), REPO_MANIFEST):
+        if any(r["round"] == rnd and r.get("data_dir") == DATA and r.get("status", "ok") == "ok" for r in _manifest_rows(path)):
+            continue
+        with open(path, "a") as f:
+            f.write(json.dumps(row, ensure_ascii=False) + "\n")
+    return row
 
 
 def build_memmap(rounds_upto):
@@ -287,13 +341,15 @@ def main():
         if not os.path.exists(best):
             import shutil
             shutil.copy(pol, best)
-        rnd = (max(all_rounds()) + 1) if all_rounds() else 0
+        check_data()
+        rnd = next_round_id()
         t = time.time()
         stats = collect(rnd, a.episodes, a.workers, best, 0.1, 0.03, 10_000 + 1000 * rnd, dcas_frac=a.dcas_frac)
         print(f"daily round {rnd}: collected {sum(s['n'] for s in stats)} frames, crashes "
               f"{sum(s['crashed'] for s in stats)} ({time.time() - t:.0f}s)", flush=True)
         for r in all_rounds():
             pack_round(r)
+        record_round(rnd, note=f"daily ep={a.episodes}")
         d = RoundData(all_rounds())
         recent = int(d.off[-2]) if len(d.off) >= 2 else 0
         print(f"  dataset {len(d)} frames (new {len(d) - recent})", flush=True)
