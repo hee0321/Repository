@@ -47,6 +47,31 @@ LAMP = {"red": (255, 40, 30), "yellow": (255, 200, 0), "green": (40, 255, 120)}
 CAR_COLORS = [(200, 200, 205), (30, 30, 35), (170, 30, 30), (40, 70, 150), (230, 230, 225), (90, 95, 100), (60, 110, 70)]
 
 
+# 픽셀 클래스 (정답 라벨·인식기 출력 공통)
+LABELS = ["other", "road", "marking", "car", "ped", "object", "signal", "lamp_red", "lamp_yellow", "lamp_green", "building"]
+LBL = {n: i for i, n in enumerate(LABELS)}
+
+
+class _DualDraw:
+    """RGB 그리기와 똑같은 모양을 정답 클래스·물체 번호 그림에도 그림 (라벨 만들기 전용)."""
+
+    def __init__(self, rgb, cls, inst):
+        self.rgb, self.cls_dr, self.inst_dr, self.c, self.inst = rgb, cls, inst, 0, 0
+
+    def set(self, c, inst):
+        self.c, self.inst = c, inst
+
+    def polygon(self, pts, fill=None):
+        self.rgb.polygon(pts, fill=fill)
+        self.cls_dr.polygon(pts, fill=self.c)
+        self.inst_dr.polygon(pts, fill=self.inst)
+
+    def ellipse(self, box, fill=None):
+        self.rgb.ellipse(box, fill=fill)
+        self.cls_dr.ellipse(box, fill=self.c)
+        self.inst_dr.ellipse(box, fill=self.inst)
+
+
 class FrontCamera:
     def __init__(self, env, ground=None, buildings=None, mount: CameraMount | None = None, rng=None):
         self.env = env
@@ -146,11 +171,13 @@ class FrontCamera:
         # 차선: 가장자리 흰 실선, 양방향이면 가운데 노란 실선(시골 1차로는 중앙선 없음), 아니면 흰 점선
         edge = on & (np.abs(np.abs(d) - (half - 0.25)) < 0.15 + 0.004 * dist) & ~gravel
         out[edge] = WHITE
+        mark = edge.copy()
         narrow = tr.width < 6.0
         cen = on & (np.abs(d) < 0.12 + 0.004 * dist) & (not narrow) & ~gravel
         dash = (np.mod(s, 8.0) < 3.0)
         out[cen & twoway] = YELLOW
         out[cen & ~twoway & dash] = WHITE
+        mark |= (cen & twoway) | (cen & ~twoway & dash)
         # 같은 방향 여러 차로(DCAS): 차로 사이 흰 점선
         if getattr(rules, "lanes", None) and len(rules.lanes) > 1:
             ls = sorted(rules.lanes)
@@ -158,6 +185,7 @@ class FrontCamera:
                 m_ = (a_ + b_) / 2
                 ln = on & (np.abs(d - m_) < 0.12 + 0.004 * dist) & dash
                 out[ln] = WHITE
+                mark |= ln
         # 정지선(내 차로 쪽) + 횡단보도
         for sg in rules.signals:
             ds_ = s - sg.s
@@ -167,6 +195,8 @@ class FrontCamera:
             out[stop] = WHITE
             zebra = on & (ds_ > 1.5) & (ds_ < 5.5) & (np.mod(d, 1.0) < 0.5)
             out[zebra] = out[zebra] * 0.3 + WHITE * 0.7
+            mark |= stop | zebra
+        self._lab_ground = (on, mark)   # 학습 정답(라벨) 그리기용 — 인식기 입력에는 안 씀
         return out, s, d
 
     def _shade(self, rgb, dist, light, bearing=None):
@@ -179,6 +209,15 @@ class FrontCamera:
             hl = hl * np.exp(-(bearing / np.radians(22)) ** 2)
         k = (light * 0.6 + 1.1 * hl)[:, None]
         return rgb * np.clip(k, 0.05, 1.2)
+
+    def render_with_labels(self, noise=0.0):
+        """같은 영상 + 픽셀별 정답 클래스(LABELS)·물체 번호. 정답은 학습 라벨·오차 측정에만 써요."""
+        self._want_labels = True
+        try:
+            img = self.render(noise=noise)
+        finally:
+            self._want_labels = False
+        return img, self._lab_cls, self._lab_inst
 
     def render(self, noise=0.0) -> np.ndarray:
         env = self.env
@@ -198,7 +237,17 @@ class FrontCamera:
         img = img.reshape(m.height_px, m.width, 3)
         im = Image.fromarray(np.clip(img, 0, 255).astype(np.uint8))
         dr = ImageDraw.Draw(im)
+        if getattr(self, "_want_labels", False):
+            on, mark = self._lab_ground
+            g = np.zeros(m.height_px * m.width, np.uint8)
+            g[self._gi] = np.where(mark, LBL["marking"], np.where(on, LBL["road"], 0))
+            lc = Image.fromarray(g.reshape(m.height_px, m.width))
+            li = Image.new("I", (m.width, m.height_px), 0)
+            dr = _DualDraw(dr, ImageDraw.Draw(lc), ImageDraw.Draw(li))
         self._draw_objects(dr, light)
+        if isinstance(dr, _DualDraw):
+            self._lab_cls = np.asarray(lc).copy()
+            self._lab_inst = np.asarray(li).astype(np.int32)
         out = np.asarray(im)
         if noise > 0:
             out = np.clip(out.astype(np.float32) + self.rng.normal(0, noise, out.shape), 0, 255).astype(np.uint8)
@@ -280,7 +329,18 @@ class FrontCamera:
                 lane = env.rules.lane_ref_at(sg.s)
                 p = tr.point_at(s_l) + tr.normal_at(s_l) * lane
                 items.append((float(np.hypot(*(p - (px, py)))), ("sig", sg, p, tr.heading_at(s_l), lane)))
+        lab = isinstance(dr, _DualDraw)
         for dep, it in sorted(items, key=lambda t: -t[0]):
+            if lab:
+                if it[0] == "bld":
+                    dr.set(LBL["building"], 0)
+                elif it[0] == "ob":
+                    k = it[1]
+                    kind = env.ob_kind[k]
+                    c = ("ped" if kind == "ped" else "object" if (kind == "object" or abs(env.ob_v[k]) < 1e-6 and kind not in ("car", "entering")) else "car")
+                    dr.set(LBL[c], k + 1)
+                else:
+                    dr.set(LBL["signal"], 1000 + env.rules.signals.index(it[1]))
             if it[0] == "bld":
                 self._draw_building(dr, it[1], it[2], light, dep, (px, py))
             elif it[0] == "ob":
@@ -364,6 +424,8 @@ class FrontCamera:
         st = sg.state(env.t)
         pos = {"red": 0.5, "yellow": 0.0, "green": -0.5}[st]   # 왼쪽(+)=빨강 … 오른쪽=초록 (운전자 기준 왼→오: 빨·노·초)
         lp = p + nrm * pos
+        if isinstance(dr, _DualDraw):
+            dr.set(LBL["lamp_" + st], dr.inst)
         u, v, z = self.project(np.array([[lp[0], lp[1], 5.25]]))
         if z[0] > 0.5:
             r = max(1.0, 0.25 * self.m.f / z[0])   # 번짐: 최소 지름 2 px
