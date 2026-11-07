@@ -211,6 +211,7 @@ class PurePursuitController:
         alpha = np.arctan2(dy, dx) - car.yaw
         steer = np.arctan2(2 * p.wheelbase * np.sin(alpha), ld)
         v_ref = self.target_speed(s, car.v)
+        self.last_v_ref = v_ref
         accel = self.pid(v_ref - car.v, env.dt)
         if v_ref < 0.05 and car.v < 0.3:
             accel = -p.max_brake  # 정지 유지
