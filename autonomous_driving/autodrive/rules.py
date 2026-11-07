@@ -58,6 +58,24 @@ class TrafficRules:
     crests: list = field(default_factory=list)  # [(s, 그 너머 보이는 거리)] 언덕 꼭대기
     rural: bool = False
     passing_ok: np.ndarray | None = None  # 앞지르기 허용 구간(중앙선 점선·직선·시야 확보). None = 전부 금지
+    # --- 같은 방향 여러 차로 (DCAS 01 시나리오, autodrive/dcas.py). None = 예전처럼 lane_ref 한 줄 ---
+    lanes: tuple | None = None          # 차로 가운데 횡오프셋들 (같은 방향, 오른쪽→왼쪽)
+    lane_w: float = 3.5                 # 차로 폭 (m)
+    lc_requests: list = field(default_factory=list)  # 경로 계획의 차로 변경 요청 [{s, to, by, reason}] (내비가 앎)
+    lat_acc_max: float | None = None    # 선언 최대 횡가속도 (R171 5.3.7.1.2: M1 ≤ 3 m/s²). None = 제한 없음
+
+    def lane_of(self, d):
+        """횡오프셋 d 가 속한 차로 가운데 (lanes 없으면 None)."""
+        if not self.lanes:
+            return None
+        return float(min(self.lanes, key=lambda c: abs(c - d)))
+
+    def lc_request_at(self, s):
+        """지금 위치에서 유효한 경로 계획 차로 변경 요청 (없으면 None)."""
+        for r in self.lc_requests:
+            if r["s"] <= s <= r["by"]:
+                return r
+        return None
 
     def mu_at(self, s, default=0.9):
         return default if self.mu is None else float(self.mu[self._i(s)])

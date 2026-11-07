@@ -3,7 +3,7 @@ from __future__ import annotations
 
 import numpy as np
 
-from .env import AutoDriveEnv
+from .env import CAR_HALF_LEN, AutoDriveEnv
 
 
 class PID:
@@ -38,6 +38,13 @@ class PurePursuitController:
         self._rt_done = set()
         self.rule_note = ""
         self._ot = None   # 앞지르는 중인 차 번호
+        # DCAS 01 모드 (같은 방향 여러 차로 + 선언 최대 횡가속도가 있는 도로, autodrive/dcas.py)
+        self.dcas = env.rules.lat_acc_max is not None
+        self.lc = None
+        self._safety = False
+        if self.dcas:
+            self.a_lat = min(self.a_lat, 0.9 * env.rules.lat_acc_max)          # 5.3.7.1.2: ≤ 3 m/s² (여유 10%)
+            self.v_max = min(env.params.max_speed, float(np.max(env.rules.limit_mps)))
 
     def reset(self):
         self.pid = PID(self.pid.kp, self.pid.ki, self.pid.kd)
@@ -46,6 +53,8 @@ class PurePursuitController:
         """앞에 서 있는 장애물이 내 차로(목표 차선)를 막으면 공간이 넓은 쪽으로 비켜 갈 횡오프셋.
         반환 (offset 또는 None, 막혀서 멈춰야 하는지)."""
         env = self.env
+        if self.dcas:
+            return None, False   # 여러 차로: 차로 안에서 비틀어 피하지 않고, 멈추거나 지시등 켜고 차로 변경(lane_plan)
         L = env.track.length
         half = env.track.width / 2
         cw = env.params.car_width
@@ -110,6 +119,140 @@ class PurePursuitController:
             self._ot = k
             return 1.6
         return None
+
+    # ---------------- DCAS 01: 시스템이 시작하는 차로 변경 (R171 6.2) ----------------
+    def _in_lane(self, k, lane):
+        env = self.env
+        return abs(env.ob_d[k] - lane) < env.rules.lane_w / 2
+
+    def _blocker(self, lane, s, rng=120.0, stationary=False):
+        """내 차로 앞 rng m 안: 서 있는 것(차·물체·보행자) 또는 아주 느린 차(제한의 40% 미만) → 번호."""
+        env = self.env
+        lim = env.rules.limit_at(s)
+        for k in np.argsort(env.ob_s):
+            g = env._gap(env.ob_s[k])
+            if not (0 < g < rng) or not self._in_lane(k, lane):
+                continue
+            if env._lat_on[k] and abs(env.ob_d[k] - env.ob_dlim[k]) > 0.05:
+                continue                      # 건너는 중/끼어드는 중: 곧 비키거나 따라갈 대상
+            if abs(env.ob_v[k]) < 1.0 or (not stationary and env.ob_kind[k] == "car" and env.ob_v[k] < 0.4 * lim and g < 50):
+                return k
+        return None
+
+    def _free_adjacent(self, lane, s):
+        env = self.env
+        lanes = env.rules.lanes
+        for cand in (lane + env.rules.lane_w, lane - env.rules.lane_w):   # 한국: 앞지르기는 왼쪽 먼저
+            if any(abs(cand - c) < 0.1 for c in lanes) and self._blocker(cand, s) is None:
+                return float(min(lanes, key=lambda c: abs(c - cand)))
+        return None
+
+    def _gap_ok(self, to, s, strict=True):
+        """목표 차로 틈 검사 (6.2.4.1: 뒤에서 오는 차가 3 m/s² 넘게 감속하지 않고 1초 거리 유지 — 여유 두고 2 m/s²,
+        6.2.4.2 미검지 가정 대신 시뮬 진실값). 반환 (가능?, 막은 차 번호, 앞쪽인지)."""
+        env = self.env
+        ve = env.car.v
+        sc = 1.0 if strict else 0.7
+        for k in range(len(env.ob_s)):
+            moving_in = env._lat_on[k] and abs(env.ob_dlim[k] - to) < env.rules.lane_w / 2
+            if not (abs(env.ob_d[k] - to) < env.rules.lane_w / 2 + 0.3 or moving_in):
+                continue
+            g = env._gap(env.ob_s[k])
+            half = env.ob_l[k] / 2 + CAR_HALF_LEN
+            vk = env.ob_v[k]
+            if g >= 0:
+                gb = g - half
+                if env.ob_kind[k] == "ped":
+                    need = 40.0
+                else:
+                    need = max(ve * 1.0 + 3.0, (ve * ve - vk * vk) / (2 * 2.0) + 6.0 if ve > vk else 0.0)
+                if gb < need * sc:
+                    return False, k, True
+            else:
+                gb = -g - half
+                fut = gb - max(vk - ve, 0.0) * 2.5          # MCC 시작까지 ~1.4 s + 여유 (6.2.4.1 가정)
+                if fut < (ve * 1.0 + 3.0) * sc:
+                    return False, k, False
+                if vk > ve and (vk - ve) ** 2 / (2 * max(fut - ve * 1.0, 0.1)) > 2.0 / sc:
+                    return False, k, False
+        return True, None, None
+
+    def lane_plan(self, s, ld):
+        """목표 횡오프셋 (차로 가운데 또는 차로 변경 중 최소 저크 곡선). 지시등은 env.set_indicator 로 켠다."""
+        env, ru, c = self.env, self.env.rules, self.env.car
+        cur = env._lane_c if env._lane_c is not None else ru.lane_of(env._d)
+        want = None
+        req = ru.lc_request_at(s)
+        if req is not None and abs(req["to"] - cur) > 0.1:
+            want = req["to"]
+        elif self._blocker(cur, s) is not None:
+            want = self._free_adjacent(cur, s)
+        lc = self.lc
+        if lc is not None and lc["s0"] is None and (want is None or abs(want - lc["to"]) > 0.1):
+            self.lc = lc = None
+            env.set_indicator(0)
+        if lc is None and want is not None:
+            lc = self.lc = dict(to=want, frm=cur, s0=None, side=int(np.sign(want - cur)), wait=None)
+        if lc is None:
+            return cur
+        if lc["s0"] is not None and not env._lcm_on and abs(env._lane_c - lc["to"]) < 0.1:
+            self.lc = None                                  # 끝: 새 차로 안정 (env가 지시등 끔)
+            return lc["to"]
+        if env.indicator != lc["side"]:
+            env.set_indicator(lc["side"])                   # 7 s 안에 MCC 못 하면 env가 끔 → 다시 켬 = 새 PCC
+        ok, k, ahead = self._gap_ok(lc["to"], s, strict=lc["s0"] is None)
+        lc["wait"] = None if ok else (k, ahead)
+        if lc["s0"] is None:
+            if ok and env.indicator_t0 is not None and env.t - env.indicator_t0 >= 3.2:   # 6.2.7: 3 s
+                lc["s0"] = s + ld
+                lc["len"] = max(5.0 * c.v, 15.0)            # 최소 저크 횡 이동: 최대 횡가속도 ≈ 5.8·3.5/25 < 1 m/s²
+                b = self._blocker(lc["frm"], s)
+                if b is not None:                           # 막힌 차로에서 비켜 나감: 남은 거리 안에서, 그만큼 천천히
+                    gb = env._gap(env.ob_s[b]) - env.ob_l[b] / 2 - CAR_HALF_LEN
+                    lc["len"] = float(np.clip(gb + CAR_HALF_LEN - 1.0, 10.0, lc["len"]))
+                    lc["blk"] = b
+        elif not ok and not env._lcm_on and abs(env._lane_c - lc["frm"]) < 0.1 and abs(env._d - lc["frm"]) < 0.6:
+            lc["s0"] = None                                 # 아직 차선 안 넘음 → 취소하고 기다림
+        if lc["s0"] is None:
+            return lc["frm"]
+        return self._ramp(s + ld)
+
+    def _ramp(self, x):
+        lc = self.lc
+        u = float(np.clip((x - lc["s0"]) / lc["len"], 0.0, 1.0))
+        return lc["frm"] + (lc["to"] - lc["frm"]) * (10 * u ** 3 - 15 * u ** 4 + 6 * u ** 5)
+
+    def _path_clears(self, k):
+        """차로 변경 중: 계획한 횡 경로가 그 장애물 뒤끝에서 이미 비켜 있으면 True (앞 장애물로 보지 않음)."""
+        env, lc = self.env, self.lc
+        if not self.dcas or lc is None or lc["s0"] is None:
+            return False
+        lat = self._ramp(env.ob_s[k] - env.ob_l[k] / 2 - 3.0)
+        return abs(lat - env.ob_d[k]) >= env.ob_r[k] + env.params.car_width / 2 + 0.3
+
+    def _predicted_conflict(self, s, v):
+        """옆으로 움직이는 것(건너는 보행자·자전거, 끼어드는 차)이 내가 도착할 때 내 길에 있을지 → (간격, 속도, 번호)."""
+        env = self.env
+        best = None
+        ve = max(v, 2.0)
+        for k in range(len(env.ob_s)):
+            if not (env._lat_on[k] and abs(env.ob_d[k] - env.ob_dlim[k]) > 0.05):
+                continue
+            g = env._gap(env.ob_s[k])
+            if not (-3 < g < 90):
+                continue
+            step = np.sign(env.ob_dlim[k] - env.ob_d[k]) * env.ob_vd[k]
+            for tau in np.arange(0.0, 6.0, 0.25):
+                dk = env.ob_d[k] + step * tau
+                if (step > 0 and dk > env.ob_dlim[k]) or (step < 0 and dk < env.ob_dlim[k]):
+                    dk = env.ob_dlim[k]
+                ds = g + env.ob_v[k] * tau - ve * tau
+                if abs(ds) < env.ob_l[k] / 2 + CAR_HALF_LEN + 1.5 and \
+                        abs(dk - env._d) < env.ob_r[k] + env.params.car_width / 2 + 0.5:
+                    if best is None or g < best[0]:
+                        best = (g, max(env.ob_v[k], 0.0), k)
+                    break
+        return best
 
     def yield_offset(self):
         """좁은 길에서 마주 오는 차가 보이면 오른쪽 끝으로 붙는다."""
@@ -179,8 +322,33 @@ class PurePursuitController:
                     v_ref = min(v_ref, rc["ped_pass_speed_kmh"] / 3.6 - 1.0)
                     self.rule_note = "보행자 옆 서행"
         # 앞 장애물: 움직이면 따라가기(ACC), 서 있고 비켜 갈 수 없으면 멈추기
+        self._safety = False
+        if self.dcas:
+            pc = self._predicted_conflict(s, v)
+            if pc is not None:
+                g, vo, k = pc
+                margin = 3.0 if env.ob_kind[k] == "ped" else 6.0 + 0.8 * v
+                gap = g - env.ob_l[k] / 2 - CAR_HALF_LEN - margin
+                v_ref = min(v_ref, float(np.sqrt(vo ** 2 + 2 * 3.5 * max(gap, 0))), vo + max(gap, 0) * 0.5)
+                self.rule_note = "건너는 보행자·끼어드는 차 예측 → 감속/정지"
+                self._safety = True
+            if self.lc is not None and self.lc["wait"] is not None and self.lc["s0"] is None:
+                k, ahead = self.lc["wait"]
+                if env.ob_kind[k] != "ped":   # 목표 차로 차 때문에 못 들어감 → 늦춰 그 차를 먼저 보냄
+                    v_ref = min(v_ref, max(env.ob_v[k] - (2.0 if ahead else 3.0), 0.0))
+                    self.rule_note = "차로 변경 틈 기다림(속도 맞춤)"
+            if self.lc is not None and self.lc["s0"] is not None:
+                D = abs(self.lc["to"] - self.lc["frm"])   # 최소 저크 곡선 최대 횡가속도 5.77·D·v²/len² ≤ 1.2 m/s²
+                v_ref = min(v_ref, float(np.sqrt(1.2 * self.lc["len"] ** 2 / (5.77 * D))))
+        if self.dcas and env.rules.lanes and (self.lc is None or self.lc["s0"] is None):
+            cur = env._lane_c if env._lane_c is not None else env.rules.lane_of(env._d)
+            b = self._blocker(cur, s, 150.0, stationary=True)      # 멀리 선 것: 미리 부드럽게 (≤ 1.8 m/s²)
+            if b is not None:
+                gb = env._gap(env.ob_s[b]) - env.ob_l[b] / 2 - CAR_HALF_LEN
+                v_ref = min(v_ref, float(np.sqrt(2 * 1.8 * max(gb - 10.0, 0.0))))
+                self.rule_note = "앞에 선 차·물체 → 미리 감속(옆 차로 비면 차로 변경)"
         lo = env.lead_obstacle()
-        if lo is not None and lo[4] == self._ot:
+        if lo is not None and (lo[4] == self._ot or self._path_clears(lo[4])):
             lo = None
         if lo is not None:
             g, vo, dd, r, _ = lo
@@ -188,6 +356,11 @@ class PurePursuitController:
             if vo > 1.0 or blocked or off is None:
                 # 차간 여유: 정지 장애물은 6 m, 움직이는 앞차는 길이 반영(범퍼 사이) + 6 m + 0.8초 거리
                 gap = g - r - 1.2 - 6.0 if vo <= 1.0 else g - env.ob_l[lo[4]] / 2 - 2.2 - 6.0 - 0.8 * v
+                if self.dcas and vo <= 1.0:
+                    gap = g - env.ob_l[lo[4]] / 2 - CAR_HALF_LEN - (10.0 if self.lc is None or self.lc["s0"] is None else 1.0)
+                elif self.dcas:
+                    gap = g - env.ob_l[lo[4]] / 2 - CAR_HALF_LEN - 4.0 - 1.4 * v   # 차간 ≈ 1.4 s + 4 m
+                self._safety = True
                 v_ref = min(v_ref, float(np.sqrt(max(vo, 0) ** 2 + 2 * self.decel * max(gap, 0))),
                             max(vo, 0) + max(gap, 0) * 0.5)
                 self.rule_note = "앞차 따라가기" if vo > 1.0 else "장애물 앞 정지"
@@ -202,6 +375,8 @@ class PurePursuitController:
         y = self.yield_offset()
         ot = self.overtake_update(s)
         lat = env.rules.lane_ref_at(s + ld) if off is None else off
+        if self.dcas and env.rules.lanes:
+            lat = self.lane_plan(s, ld)
         if ot is not None and off is None:
             lat = ot
         if y is not None and off is None:
@@ -211,7 +386,13 @@ class PurePursuitController:
         alpha = np.arctan2(dy, dx) - car.yaw
         steer = np.arctan2(2 * p.wheelbase * np.sin(alpha), ld)
         v_ref = self.target_speed(s, car.v)
+        self.last_v_ref = v_ref
         accel = self.pid(v_ref - car.v, env.dt)
+        if self.dcas and not self._safety and car.v > v_ref - 3.0:
+            accel = max(accel, -2.0)   # 5.3.6.3.1/6.2.4.3: 안전 때문이 아니면 부드럽게 (≤ 2 m/s²)
+        if self.dcas and self._safety:
+            # 앞차를 따라 멈출 때도 필요한 만큼만 (급제동은 실제로 필요할 때만)
+            pass
         if v_ref < 0.05 and car.v < 0.3:
             accel = -p.max_brake  # 정지 유지
         a_norm = accel / p.max_accel if accel >= 0 else accel / p.max_brake
