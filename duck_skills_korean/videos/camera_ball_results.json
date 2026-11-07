@@ -1,0 +1,153 @@
+{
+  "checkpoint": "hf://pollen-robotics/microduck-training/bundles/velstand/0045i2si_2749/model_2749.pt",
+  "detection": "numpy HSV red hue ±12°, saturation≥0.45, largest component. Not a learned vision model.",
+  "locomotion": "Pollen velstand v8 policy, commands only. No new RL.",
+  "head": "duck_skills_korean/head.py colors and jaw on a model copy. MJCF head_camera is rotated 180° about its x axis (it faces backward) and +90° about its z axis (the raw image is on its side).",
+  "success_dist_m": 0.4,
+  "trials": [
+    {
+      "name": "left_90_1.0m",
+      "bearing_deg": 90.0,
+      "start_dist_m": 1.0,
+      "start_yaw_rad": 0.0,
+      "offscreen_at_start": true,
+      "first_detect_s": 1.2,
+      "modes": [
+        "search",
+        "align",
+        "approach",
+        "stop"
+      ],
+      "final_mode": "stop",
+      "sim_s": 11.84,
+      "wall_s": 105.4,
+      "upright_frac": 1.0,
+      "upright_end": true,
+      "displacement_m": 0.603,
+      "final_dist_m": 0.397,
+      "min_dist_m": 0.393,
+      "success": true,
+      "success_rule": "stop, final base-to-ball <= 0.4 m, upright, offscreen at start"
+    },
+    {
+      "name": "right_90_1.0m",
+      "bearing_deg": -90.0,
+      "start_dist_m": 1.0,
+      "start_yaw_rad": 0.6,
+      "offscreen_at_start": true,
+      "first_detect_s": 3.9,
+      "modes": [
+        "search",
+        "align",
+        "approach",
+        "stop"
+      ],
+      "final_mode": "stop",
+      "sim_s": 12.94,
+      "wall_s": 53.7,
+      "upright_frac": 1.0,
+      "upright_end": true,
+      "displacement_m": 0.634,
+      "final_dist_m": 0.372,
+      "min_dist_m": 0.364,
+      "success": true,
+      "success_rule": "stop, final base-to-ball <= 0.4 m, upright, offscreen at start"
+    },
+    {
+      "name": "left_150_1.1m",
+      "bearing_deg": 150.0,
+      "start_dist_m": 1.1,
+      "start_yaw_rad": -0.4,
+      "offscreen_at_start": true,
+      "first_detect_s": 7.9,
+      "modes": [
+        "search",
+        "align",
+        "approach",
+        "stop"
+      ],
+      "final_mode": "stop",
+      "sim_s": 17.24,
+      "wall_s": 70.3,
+      "upright_frac": 1.0,
+      "upright_end": true,
+      "displacement_m": 0.709,
+      "final_dist_m": 0.394,
+      "min_dist_m": 0.387,
+      "success": true,
+      "success_rule": "stop, final base-to-ball <= 0.4 m, upright, offscreen at start"
+    },
+    {
+      "name": "right_120_0.8m",
+      "bearing_deg": -120.0,
+      "start_dist_m": 0.8,
+      "start_yaw_rad": 1.2,
+      "offscreen_at_start": true,
+      "first_detect_s": 14.8,
+      "modes": [
+        "search",
+        "align",
+        "approach",
+        "stop"
+      ],
+      "final_mode": "stop",
+      "sim_s": 22.74,
+      "wall_s": 94.4,
+      "upright_frac": 1.0,
+      "upright_end": true,
+      "displacement_m": 0.419,
+      "final_dist_m": 0.383,
+      "min_dist_m": 0.376,
+      "success": true,
+      "success_rule": "stop, final base-to-ball <= 0.4 m, upright, offscreen at start"
+    },
+    {
+      "name": "left_70_1.4m",
+      "bearing_deg": 70.0,
+      "start_dist_m": 1.4,
+      "start_yaw_rad": -1.0,
+      "offscreen_at_start": true,
+      "first_detect_s": 0.8,
+      "modes": [
+        "search",
+        "align",
+        "approach",
+        "stop"
+      ],
+      "final_mode": "stop",
+      "sim_s": 16.34,
+      "wall_s": 65.7,
+      "upright_frac": 1.0,
+      "upright_end": true,
+      "displacement_m": 1.019,
+      "final_dist_m": 0.384,
+      "min_dist_m": 0.371,
+      "success": true,
+      "success_rule": "stop, final base-to-ball <= 0.4 m, upright, offscreen at start"
+    },
+    {
+      "name": "no_target",
+      "bearing_deg": null,
+      "start_dist_m": null,
+      "start_yaw_rad": 0.3,
+      "offscreen_at_start": true,
+      "first_detect_s": null,
+      "modes": [
+        "search",
+        "giveup"
+      ],
+      "final_mode": "giveup",
+      "sim_s": 32.62,
+      "wall_s": 139.8,
+      "upright_frac": 1.0,
+      "upright_end": true,
+      "displacement_m": 0.035,
+      "final_dist_m": null,
+      "min_dist_m": null,
+      "success": true,
+      "success_rule": "giveup, never approached, stayed upright, displacement < 1 m"
+    }
+  ],
+  "n_success": 6,
+  "n_trials": 6
+}
