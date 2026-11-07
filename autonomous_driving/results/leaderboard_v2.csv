@@ -55,3 +55,4 @@ time,model,total,urban,rural,finished,crashes,violations,speeding_s,school_speed
 2026-11-08 07:10,cycle53-rural-mix(r2),90.1,87.35,93.53,17/18,1,0,0.0,0.0,0.249,3,no,4.3,rural_wide_traffic: 시골길 위험 행동 증가; rural_wide_traffic: 점수 크게 하락 97.62→78.46; 전체 점수 부족 91.23→90.1 (필요 +0.5); 집계 안전 우위 아님: 
 2026-11-08 07:15,cycle54-rural-mix(r2),87.47,87.5,87.43,16/18,2,0,0.0,0.0,0.241,2,no,5.2,rural_wide_traffic: 새로 이탈; rural_wide_traffic: 완주율 하락 1.0→0.723; rural_wide_traffic: 점수 크게 하락 97.62→34.52; 전체 점수 부족 91.2
 2026-11-08 07:24,cycle55-rural-mix(r6),91.04,87.48,95.5,17/18,1,0,0.0,0.0,0.235,2,no,4.2,"전체 점수 부족 91.23→91.04 (필요 +0.5); 집계 안전 우위 아님: 도시 87.51→87.48, 전체 91.23→91.04, 시골 95.89→95.5"
+2026-11-08 07:28,cycle56-rural-mix(r4),96.02,97.76,93.84,18/18,0,0,0.0,0.0,0.249,3,no,4.2,"rural_wide_traffic: 시골길 위험 행동 증가; rural_wide_traffic: 점수 크게 하락 97.62→81.45; 집계 안전 우위 아님: rural_unsafe 2→3, 시골 95.89→93.8"
