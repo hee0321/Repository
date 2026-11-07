@@ -11,3 +11,4 @@
 {"round": 10, "data_dir": "/workspace/autodrive-vision-data", "status": "lost", "era": "2026-10-30..11-04", "note": "2026-11-04 r10 까지 있던 라운드(round_00..10). 2026-11-05 07:45:50 KST 에 폴더가 새로 만들어졌을 때 이미 없음. 원인 미확인"}
 {"round": 0, "data_dir": "/workspace/autodrive-vision-data", "img": "round_00_img.npy", "frames": 153160, "img_bytes": 5646090368, "created": "2026-11-05 07:50 KST", "status": "ok", "era": "2026-11-05~", "note": "번호 0·1 을 다시 씀(예전 라운드와 다른 데이터)"}
 {"round": 1, "data_dir": "/workspace/autodrive-vision-data", "img": "round_01_img.npy", "frames": 100665, "img_bytes": 3710914688, "created": "2026-11-06 07:38 KST", "status": "ok", "era": "2026-11-05~", "note": "번호 0·1 을 다시 씀(예전 라운드와 다른 데이터)"}
+{"round": 11, "data_dir": "/workspace/autodrive-vision-data", "img": "round_11_img.npy", "frames": 110590, "img_bytes": 4076789888, "created": "2026-11-08 07:38 KST", "note": "daily ep=200"}
