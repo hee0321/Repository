@@ -1,7 +1,8 @@
 """CPU MuJoCo: 머리 카메라 RGB(HSV)로 빨간 공을 찾아 걸어간다.
 
 제어기(camera_seek.py)는 검출 픽셀과 넘어짐 여부만 본다.
-공의 시뮬레이터 좌표는 공을 처음에 놓는 일과, 끝난 뒤 거리를 재는 일에만 쓴다.
+공의 시뮬레이터 좌표는 공을 처음에 놓는 일, 끝난 뒤 거리를 재는 일,
+그리고 외부 영상 카메라가 덕과 공을 한 화면에 담는 일에만 쓴다. 제어기로 넘기지 않는다.
 
   MUJOCO_GL=osmesa python run_camera_ball.py --probe
   MUJOCO_GL=osmesa python run_camera_ball.py --video /opt/cursor/artifacts/microduck_camera_ball.mp4
@@ -28,7 +29,7 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
 
 from camera_seek import CameraSeek  # noqa: E402
-from camera_vision import detect_red, pixel_bearing  # noqa: E402
+from camera_vision import detect_red, pixel_bearing, red_mask  # noqa: E402
 from duck_sim import Cmd, DuckSim, HIDE  # noqa: E402
 
 V8 = "hf://pollen-robotics/microduck-training/bundles/velstand/0045i2si_2749/model_2749.pt"
@@ -177,10 +178,11 @@ def compose(external, head, det, said, detail, status, eval_line):
     dr.text((32, 24), lines[0], font=big, fill=(20, 20, 20, 255))
     dr.text((32, 74), lines[1], font=mid, fill=(180, 50, 20, 255))
     dr.text((ext.width - inset.width - 8, 16 + inset.height + 6), "머리 카메라 · HSV", font=small, fill=(255, 255, 255, 255))
+    # 방법 표기는 제목 아래. 오른쪽 아래는 비워서 공이 자막에 가리지 않게 한다.
     tag = "HSV 색깔 검출 · v8 보행 재사용 · 새 학습 없음"
     tw = dr.textlength(tag, font=small)
-    dr.rounded_rectangle((ext.width - tw - 28, ext.height - 44, ext.width - 12, ext.height - 12), 8, fill=(0, 0, 0, 150))
-    dr.text((ext.width - tw - 20, ext.height - 38), tag, font=small, fill=(255, 255, 255, 255))
+    dr.rounded_rectangle((16, 126, 36 + tw, 158), 8, fill=(0, 0, 0, 150))
+    dr.text((26, 130), tag, font=small, fill=(255, 255, 255, 255))
     sw = dr.textlength(status, font=small)
     dr.rounded_rectangle((14, ext.height - 78, 28 + sw, ext.height - 48), 8, fill=(0, 0, 0, 150))
     dr.text((22, ext.height - 72), status, font=small, fill=(255, 255, 255, 255))
@@ -191,12 +193,37 @@ def compose(external, head, det, said, detail, status, eval_line):
 
 
 def aim_external(sim: DuckSim) -> None:
+    """영상용 자유 카메라. 덕의 방향만 따라가면 공이 화면 밖으로 나간다.
+
+    2026-11-07 영상: 0–2초엔 공이 보이다가, 덕이 도는 3–6초에 카메라가 덕 뒤로 붙으며
+    공이 절두체 밖으로 나갔고, 약 7초에 모서리로 다시 들어왔다. 공의 상태는 그대로였다
+    (머리 카메라와 평가 거리는 끊기지 않음). 그래서 여기만 공 위치를 읽어 둘의 한가운데를
+    옆에서 본다. 이 값은 제어기에 넣지 않는다.
+    """
     cam = sim.env._offline_renderer._cam
     p, yaw, _ = sim.pose()
-    cam.lookat[:] = (float(p[0]), float(p[1]), 0.08)
-    cam.distance = 1.45
-    cam.elevation = -26.0
-    cam.azimuth = math.degrees(yaw) + 150.0
+    ball = np.asarray(sim.ball_xy, dtype=float)
+    delta = ball - p[:2]
+    sep = float(np.hypot(delta[0], delta[1]))
+    if sep > 8.0:
+        cam.lookat[:] = (float(p[0]), float(p[1]), 0.08)
+        cam.distance = 1.9
+        cam.elevation = -28.0
+        cam.azimuth = math.degrees(yaw) + 135.0
+        return
+    mid = (p[:2] + ball) / 2.0
+    heading = math.atan2(delta[1], delta[0])
+    prev = math.radians(float(cam.azimuth))
+    cands = (heading + math.pi / 2.0, heading - math.pi / 2.0)
+
+    def turn(a):
+        return abs(math.atan2(math.sin(a - prev), math.cos(a - prev)))
+
+    az = min(cands, key=turn)
+    cam.lookat[:] = (float(mid[0]), float(mid[1]), 0.06)
+    cam.distance = max(3.1, sep * 1.8 + 1.6)
+    cam.elevation = -42.0
+    cam.azimuth = math.degrees(az)
 
 
 def run_trial(sim, renderer, cid, trial, video_path=None, shot_path=None) -> dict:
@@ -228,6 +255,7 @@ def run_trial(sim, renderer, cid, trial, video_path=None, shot_path=None) -> dic
     modes = []
     first_detect_s = None
     shot_saved = False
+    external_ball_miss = 0
     cmd = Cmd()
     t_stop = None
     wall0 = time.time()
@@ -269,7 +297,11 @@ def run_trial(sim, renderer, cid, trial, video_path=None, shot_path=None) -> dic
                 eval_line = "평가용: 공 없음"
             if not up:
                 eval_line += " · 넘어짐"
-            frame = compose(sim.render(), rgb, det, snap.said, snap.detail, status, eval_line)
+            raw = sim.render()
+            if has_ball and gt_distance(sim) < 5.0 and int(red_mask(raw).sum()) < 40:
+                external_ball_miss += 1
+                print(f"  EXTERNAL BALL OUT OF FRAME t={k * sim.dt:.2f}", flush=True)
+            frame = compose(raw, rgb, det, snap.said, snap.detail, status, eval_line)
             writer.append_data(frame)
             if shot_path and not shot_saved and seek.mode == "stop" and det is not None:
                 os.makedirs(os.path.dirname(shot_path) or ".", exist_ok=True)
@@ -289,8 +321,12 @@ def run_trial(sim, renderer, cid, trial, video_path=None, shot_path=None) -> dic
             eval_line = "평가용: 공 없음"
         v = sim.robot.data.root_link_lin_vel_b[0].numpy()
         status = f"끝 · 실제 vx {float(v[0]):+.2f}"
-        writer.append_data(compose(sim.render(), rgb, det, snap.said, snap.detail, status, eval_line))
+        raw = sim.render()
+        if has_ball and gt_distance(sim) < 5.0 and int(red_mask(raw).sum()) < 40:
+            external_ball_miss += 1
+        writer.append_data(compose(raw, rgb, det, snap.said, snap.detail, status, eval_line))
         writer.close()
+        print(f"EXTERNAL_BALL_MISS_FRAMES {external_ball_miss}", flush=True)
     p1 = sim.pose()[0]
     disp = float(np.hypot(p1[0] - p0[0], p1[1] - p0[1]))
     out = {

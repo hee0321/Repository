@@ -210,7 +210,9 @@ CUDA_VISIBLE_DEVICES="" MUJOCO_GL=osmesa PYOPENGL_PLATFORM=osmesa HF_HUB_DISABLE
   --shot /opt/cursor/artifacts/microduck_camera_ball_detect.png
 ```
 
-자세한 설치는 `requirements-camera.txt`. 영상: `videos/camera_ball_search.mp4` (12.4초, 외부 화면 + 머리 카메라 삽입, 한국어 자막).
+자세한 설치는 `requirements-camera.txt`. 영상: `videos/camera_ball_search.mp4` (10.7초, 외부 화면 + 머리 카메라 삽입, 한국어 자막).
+
+외부 카메라는 처음에 덕의 방향만 따라가서, 덕이 도는 3–6초에 공이 화면 밖으로 나갔다가 약 7초에 모서리로 돌아왔다. 공의 물리 상태는 그대로였다(머리 카메라와 평가 거리는 끊기지 않음). 영상 카메라만 덕과 공의 한가운데를 옆에서 보게 바꿨다. 그 위치는 제어기에 넣지 않는다. 다시 찍은 영상은 매 프레임 외부 화면에 빨간 픽셀이 있고, 그 실행은 0.348 m 에서 서서 멈췄다. 위 6시험 표는 그 전 측정 그대로다.
 
 한계: 시뮬레이션뿐이다. 공은 스크립트가 제자리에 붙잡아 두는 운동학적 공이라 차면 굴러가지 않는다. 탐색은 몸을 왼쪽(양의 회전)으로만 돌려서, 오른쪽 뒤의 공은 한 바퀴 가까이 돌아야 보인다. v8 은 명령 0.26 m/s 가 실제 약 0.12 m/s 다. 1.5 m 보다 멀면 덩어리가 작아져 놓칠 수 있다.
 
