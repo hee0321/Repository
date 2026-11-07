@@ -73,7 +73,7 @@ class Cmd:
 
 
 class DuckSim:
-    def __init__(self, ckpt: str, width=960, height=544, distance=0.9, with_ball=True, with_obstacles=True, with_beak=True):
+    def __init__(self, ckpt: str, width=960, height=544, distance=0.9, with_ball=True, with_obstacles=True, with_beak=True, ball_rgba=None):
         cfg = load_env_cfg(TASK, play=True)
         agent = load_rl_cfg(TASK)
         cfg.scene.num_envs = 1
@@ -94,7 +94,25 @@ class DuckSim:
             c.resampling_time_range = (1e9, 1e9)
             c.debug_vis = False  # 명령 화살표(파란 표시) 숨기기
         if with_ball:
-            cfg.scene.entities = {**cfg.scene.entities, "ball": MICRODUCK_BALL_CFG}
+            ball_cfg = MICRODUCK_BALL_CFG
+            if ball_rgba is not None:
+                # 보이기용 색만 바꿈. 크기·질량·마찰은 공개 ball.xml 그대로.
+                rgba = tuple(float(x) for x in ball_rgba)
+                base_fn = MICRODUCK_BALL_CFG.spec_fn
+
+                def _colored_ball(base_fn=base_fn, rgba=rgba):
+                    spec = base_fn()
+                    n = 0
+                    for body in spec.bodies:
+                        for g in body.geoms:
+                            g.rgba[:] = rgba
+                            n += 1
+                    if n != 1:
+                        raise RuntimeError(f"ball spec geom count {n}, expected 1")
+                    return spec
+
+                ball_cfg = replace(MICRODUCK_BALL_CFG, spec_fn=_colored_ball)
+            cfg.scene.entities = {**cfg.scene.entities, "ball": ball_cfg}
             cfg.sim.nconmax = max(cfg.sim.nconmax or 0, 50)
         if with_obstacles:
             for (name, kind, size), rgba in zip(OBSTACLES, OBST_COLORS):
